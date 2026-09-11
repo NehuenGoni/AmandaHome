@@ -6,8 +6,10 @@ import helmet from "helmet";
 import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
+import { adminCategoryRouter } from "./routes/adminCategoryRoutes.js";
 import { adminRouter } from "./routes/adminRoutes.js";
 import { authRouter } from "./routes/authRoutes.js";
+import { categoryRouter } from "./routes/categoryRoutes.js";
 
 export function createApp() {
   const app = express();
@@ -29,6 +31,8 @@ export function createApp() {
 
   app.use("/api/auth", authRouter);
   app.use("/api/admin", adminRouter);
+  app.use("/api/admin/categories", adminCategoryRouter);
+  app.use("/api/categories", categoryRouter);
 
   // El resto de las rutas de negocio (products, orders, ...) se montan acá
   // a medida que avanzan las siguientes fases.
