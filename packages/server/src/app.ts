@@ -10,6 +10,7 @@ import { adminCategoryRouter } from "./routes/adminCategoryRoutes.js";
 import { adminProductRouter } from "./routes/adminProductRoutes.js";
 import { adminRouter } from "./routes/adminRoutes.js";
 import { authRouter } from "./routes/authRoutes.js";
+import { cartRouter } from "./routes/cartRoutes.js";
 import { categoryRouter } from "./routes/categoryRoutes.js";
 import { productRouter } from "./routes/productRoutes.js";
 import { uploadRouter } from "./routes/uploadRoutes.js";
@@ -39,8 +40,9 @@ export function createApp() {
   app.use("/api/admin/products", adminProductRouter);
   app.use("/api/products", productRouter);
   app.use("/api/uploads", uploadRouter);
+  app.use("/api/cart", cartRouter);
 
-  // El resto de las rutas de negocio (orders, cart, checkout, ...) se
+  // El resto de las rutas de negocio (orders, checkout, inventory, ...) se
   // montan acá a medida que avanzan las siguientes fases.
 
   app.use(notFoundHandler);
