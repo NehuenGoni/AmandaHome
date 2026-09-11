@@ -6,6 +6,7 @@ import helmet from "helmet";
 import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
+import { authRouter } from "./routes/authRoutes.js";
 
 export function createApp() {
   const app = express();
@@ -25,8 +26,10 @@ export function createApp() {
     res.json({ status: "ok" });
   });
 
-  // Las rutas de negocio (auth, admin, products, orders, ...) se montan acá
-  // a medida que avanzan las siguientes fases.
+  app.use("/api/auth", authRouter);
+
+  // El resto de las rutas de negocio (admin, products, orders, ...) se
+  // montan acá a medida que avanzan las siguientes fases.
 
   app.use(notFoundHandler);
   app.use(errorHandler);
