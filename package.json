@@ -1,0 +1,26 @@
+{
+  "name": "amanda-ecommerce",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Plataforma e-commerce + gestión de mercadería para Amanda Home & Deco",
+  "workspaces": [
+    "packages/shared",
+    "packages/server",
+    "packages/client"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w packages/shared",
+    "dev:server": "npm run dev -w packages/server",
+    "dev:client": "npm run dev -w packages/client",
+    "build:server": "npm run build:shared && npm run build -w packages/server",
+    "build:client": "npm run build:shared && npm run build -w packages/client",
+    "test": "npm run test -w packages/shared && npm run test -w packages/server && npm run test -w packages/client",
+    "test:shared": "npm run test -w packages/shared",
+    "test:server": "npm run test -w packages/server",
+    "test:client": "npm run test -w packages/client",
+    "lint": "npm run lint -w packages/server && npm run lint -w packages/client"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

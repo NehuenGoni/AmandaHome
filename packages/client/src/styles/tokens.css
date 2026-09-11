@@ -1,0 +1,84 @@
+/**
+ * Paleta de marca Amanda Home & Deco.
+ * Colores de identidad fijos + tokens de interfaz (claro/oscuro) tal como
+ * fueron validados — no reinterpretar los valores.
+ */
+
+:root {
+  /* Colores de identidad fijos */
+  --color-negro-amanda: #211e1a;
+  --color-dorado-amanda: #c69a3b;
+  --color-crema-lino: #f5f0e4;
+  --color-verde-salvia: #8a9678;
+  --color-terracota: #b75e37;
+  --color-madera-natural: #cba379;
+
+  /* Tokens de interfaz — modo claro (por defecto) */
+  --bg: #f5f0e4;
+  --surface: #fbf8f1;
+  --surface-alt: #ece4d0;
+  --border: #dcd2bb;
+  --text: #211e1a;
+  --text-muted: #6b6252;
+  --primary: #211e1a;
+  --primary-strong: #3a352c;
+  --on-primary: #c69a3b;
+  --accent: #c69a3b;
+  --accent-deep: #a57a22;
+  --accent2: #b75e37;
+  --accent2-deep: #954a2a;
+  --support: #7c8969;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --bg: #1b1912;
+    --surface: #242019;
+    --surface-alt: #2e2a1e;
+    --border: #423c2b;
+    --text: #f2ebda;
+    --text-muted: #b7ad93;
+    --primary: #e0b24f;
+    --primary-strong: #f0c878;
+    --on-primary: #1b1912;
+    --accent: #e0b24f;
+    --accent-deep: #f0c878;
+    --accent2: #d07a4c;
+    --accent2-deep: #e2956a;
+    --support: #a3b18a;
+  }
+}
+
+:root.dark {
+  --bg: #1b1912;
+  --surface: #242019;
+  --surface-alt: #2e2a1e;
+  --border: #423c2b;
+  --text: #f2ebda;
+  --text-muted: #b7ad93;
+  --primary: #e0b24f;
+  --primary-strong: #f0c878;
+  --on-primary: #1b1912;
+  --accent: #e0b24f;
+  --accent-deep: #f0c878;
+  --accent2: #d07a4c;
+  --accent2-deep: #e2956a;
+  --support: #a3b18a;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-accent2: var(--accent2);
+  --color-accent2-deep: var(--accent2-deep);
+  --color-support: var(--support);
+}
