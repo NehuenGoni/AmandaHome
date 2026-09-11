@@ -7,6 +7,7 @@ import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { adminCategoryRouter } from "./routes/adminCategoryRoutes.js";
+import { adminOrderRouter } from "./routes/adminOrderRoutes.js";
 import { adminProductRouter } from "./routes/adminProductRoutes.js";
 import { adminRouter } from "./routes/adminRoutes.js";
 import { authRouter } from "./routes/authRoutes.js";
@@ -14,6 +15,7 @@ import { cartRouter } from "./routes/cartRoutes.js";
 import { categoryRouter } from "./routes/categoryRoutes.js";
 import { checkoutRouter } from "./routes/checkoutRoutes.js";
 import { checkoutWebhookRouter } from "./routes/checkoutWebhookRoutes.js";
+import { orderRouter } from "./routes/orderRoutes.js";
 import { productRouter } from "./routes/productRoutes.js";
 import { uploadRouter } from "./routes/uploadRoutes.js";
 
@@ -46,9 +48,11 @@ export function createApp() {
   app.use("/api/uploads", uploadRouter);
   app.use("/api/cart", cartRouter);
   app.use("/api/checkout", checkoutRouter);
+  app.use("/api/admin/orders", adminOrderRouter);
+  app.use("/api/orders", orderRouter);
 
-  // El resto de las rutas de negocio (orders, inventory, supplier-purchases,
-  // ...) se montan acá a medida que avanzan las siguientes fases.
+  // El resto de las rutas de negocio (inventory, supplier-purchases, ...) se
+  // montan acá a medida que avanzan las siguientes fases.
 
   app.use(notFoundHandler);
   app.use(errorHandler);

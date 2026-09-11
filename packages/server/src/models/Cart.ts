@@ -1,4 +1,4 @@
-import { Schema, model, type HydratedDocument, type Types } from "mongoose";
+import mongoose, { Schema, model, type HydratedDocument, type Model, type Types } from "mongoose";
 
 export interface ICartItem {
   product: Types.ObjectId;
@@ -30,4 +30,4 @@ const cartSchema = new Schema<ICart>(
   { timestamps: true },
 );
 
-export const Cart = model<ICart>("Cart", cartSchema);
+export const Cart = (mongoose.models.Cart as Model<ICart>) ?? model<ICart>("Cart", cartSchema);

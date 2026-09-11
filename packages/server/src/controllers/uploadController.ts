@@ -6,3 +6,8 @@ export const signProductImageUpload = asyncHandler(async (_req: Request, res: Re
   const params = uploadService.signProductImageUpload();
   res.json(params);
 });
+
+export const signReceiptUpload = asyncHandler(async (req: Request, res: Response) => {
+  const params = await uploadService.signReceiptUpload(req.params.orderId as string, req.user!.id);
+  res.json(params);
+});

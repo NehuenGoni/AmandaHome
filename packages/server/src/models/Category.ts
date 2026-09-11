@@ -1,5 +1,5 @@
 import { slugify } from "@amanda/shared";
-import { Schema, model, type HydratedDocument, type Types } from "mongoose";
+import mongoose, { Schema, model, type HydratedDocument, type Model, type Types } from "mongoose";
 
 export interface ICategory {
   name: string;
@@ -37,4 +37,5 @@ categorySchema.pre("validate", function generateSlug(next) {
   next();
 });
 
-export const Category = model<ICategory>("Category", categorySchema);
+export const Category =
+  (mongoose.models.Category as Model<ICategory>) ?? model<ICategory>("Category", categorySchema);

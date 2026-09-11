@@ -1,5 +1,5 @@
 import type { OrderStatus, PaymentStatus } from "@amanda/shared";
-import { Schema, model, type HydratedDocument, type Types } from "mongoose";
+import mongoose, { Schema, model, type HydratedDocument, type Model, type Types } from "mongoose";
 
 const ORDER_STATUSES: OrderStatus[] = [
   "pending",
@@ -58,6 +58,7 @@ export interface IOrder {
   shippingAddress: IShippingAddressSnapshot;
   trackingNumber?: string;
   notes?: string;
+  receiptUrl?: string;
 }
 
 export type OrderDocument = HydratedDocument<IOrder>;
@@ -122,10 +123,11 @@ const orderSchema = new Schema<IOrder>(
     shippingAddress: { type: shippingAddressSnapshotSchema, required: true },
     trackingNumber: { type: String },
     notes: { type: String },
+    receiptUrl: { type: String },
   },
   { timestamps: true },
 );
 
 orderSchema.index({ customer: 1, createdAt: -1 });
 
-export const Order = model<IOrder>("Order", orderSchema);
+export const Order = (mongoose.models.Order as Model<IOrder>) ?? model<IOrder>("Order", orderSchema);

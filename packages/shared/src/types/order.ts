@@ -58,4 +58,5 @@ export interface Order extends WithTimestamps {
   shippingAddress: ShippingAddressSnapshot;
   trackingNumber?: string;
   notes?: string;
+  receiptUrl?: string;
 }

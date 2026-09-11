@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose";
+import mongoose, { Schema, model, type Model } from "mongoose";
 
 interface ICounter {
   _id: string;
@@ -10,7 +10,7 @@ const counterSchema = new Schema<ICounter>({
   seq: { type: Number, default: 0 },
 });
 
-export const Counter = model<ICounter>("Counter", counterSchema);
+export const Counter = (mongoose.models.Counter as Model<ICounter>) ?? model<ICounter>("Counter", counterSchema);
 
 /**
  * Atómico vía findOneAndUpdate + upsert: dos requests concurrentes nunca

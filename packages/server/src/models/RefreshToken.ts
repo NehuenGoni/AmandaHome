@@ -1,4 +1,4 @@
-import { Schema, model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
 export interface IRefreshToken {
   user: Types.ObjectId;
@@ -22,4 +22,6 @@ const refreshTokenSchema = new Schema<IRefreshToken>(
 // TTL: Mongo borra el documento solo una vez vencido, la revocación explícita es inmediata.
 refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export const RefreshToken = model<IRefreshToken>("RefreshToken", refreshTokenSchema);
+export const RefreshToken =
+  (mongoose.models.RefreshToken as Model<IRefreshToken>) ??
+  model<IRefreshToken>("RefreshToken", refreshTokenSchema);

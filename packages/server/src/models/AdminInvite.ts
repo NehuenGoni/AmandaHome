@@ -1,4 +1,4 @@
-import { Schema, model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
 export interface IAdminInvite {
   email: string;
@@ -23,4 +23,6 @@ const adminInviteSchema = new Schema<IAdminInvite>(
 
 adminInviteSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export const AdminInvite = model<IAdminInvite>("AdminInvite", adminInviteSchema);
+export const AdminInvite =
+  (mongoose.models.AdminInvite as Model<IAdminInvite>) ??
+  model<IAdminInvite>("AdminInvite", adminInviteSchema);

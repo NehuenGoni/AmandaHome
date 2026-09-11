@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { Schema, model, type HydratedDocument, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type HydratedDocument, type Model, type Types } from "mongoose";
 import type { Role } from "@amanda/shared";
 
 const SALT_ROUNDS = 10;
@@ -86,4 +86,4 @@ userSchema.methods.comparePassword = function comparePassword(candidate: string)
   return bcrypt.compare(candidate, this.password);
 };
 
-export const User = model<IUser, UserModel>("User", userSchema);
+export const User = (mongoose.models.User as UserModel) ?? model<IUser, UserModel>("User", userSchema);

@@ -1,4 +1,4 @@
-import { Schema, model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
 export interface IPasswordResetToken {
   user: Types.ObjectId;
@@ -19,7 +19,6 @@ const passwordResetTokenSchema = new Schema<IPasswordResetToken>(
 
 passwordResetTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export const PasswordResetToken = model<IPasswordResetToken>(
-  "PasswordResetToken",
-  passwordResetTokenSchema,
-);
+export const PasswordResetToken =
+  (mongoose.models.PasswordResetToken as Model<IPasswordResetToken>) ??
+  model<IPasswordResetToken>("PasswordResetToken", passwordResetTokenSchema);

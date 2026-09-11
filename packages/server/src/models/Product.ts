@@ -1,6 +1,6 @@
 import type { ImageSource } from "@amanda/shared";
 import { slugify } from "@amanda/shared";
-import { Schema, model, type HydratedDocument, type Types } from "mongoose";
+import mongoose, { Schema, model, type HydratedDocument, type Model, type Types } from "mongoose";
 
 export interface IProductImage {
   url: string;
@@ -98,4 +98,5 @@ productSchema.pre("validate", function generateSlug(next) {
   next();
 });
 
-export const Product = model<IProduct>("Product", productSchema);
+export const Product =
+  (mongoose.models.Product as Model<IProduct>) ?? model<IProduct>("Product", productSchema);

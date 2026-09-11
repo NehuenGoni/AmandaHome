@@ -1,7 +1,19 @@
+import type { OrderStatus } from "@amanda/shared";
+import { formatMoney } from "@amanda/shared";
+
 interface EmailTemplate {
   subject: string;
   html: string;
 }
+
+const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  pending: "Pendiente de pago",
+  confirmed: "Confirmado",
+  preparing: "En preparación",
+  shipped: "Enviado",
+  delivered: "Entregado",
+  cancelled: "Cancelado",
+};
 
 const BRAND = {
   bg: "#F5F0E4",
@@ -74,6 +86,34 @@ export function adminRevokedTemplate(firstName: string): EmailTemplate {
     html: wrapper(
       `Hola ${firstName}`,
       `<p style="color:${BRAND.textMuted};">Tu rol de administrador/a fue revocado. Tu cuenta sigue activa como cliente.</p>`,
+    ),
+  };
+}
+
+export function orderConfirmationTemplate(
+  firstName: string,
+  order: { orderNumber: number; total: number },
+): EmailTemplate {
+  return {
+    subject: `Confirmamos tu pedido #${order.orderNumber}`,
+    html: wrapper(
+      `Hola ${firstName}, ¡tu pago fue aprobado!`,
+      `<p style="color:${BRAND.textMuted};">Tu pedido <strong>#${order.orderNumber}</strong> por un total de <strong>${formatMoney(order.total)}</strong> ya está confirmado y lo estamos preparando.</p>`,
+    ),
+  };
+}
+
+export function orderStatusChangeTemplate(
+  firstName: string,
+  order: { orderNumber: number },
+  newStatus: OrderStatus,
+): EmailTemplate {
+  const label = ORDER_STATUS_LABELS[newStatus];
+  return {
+    subject: `Tu pedido #${order.orderNumber}: ${label}`,
+    html: wrapper(
+      `Hola ${firstName}`,
+      `<p style="color:${BRAND.textMuted};">El estado de tu pedido <strong>#${order.orderNumber}</strong> cambió a: <strong>${label}</strong>.</p>`,
     ),
   };
 }

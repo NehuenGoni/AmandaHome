@@ -1,9 +1,12 @@
+import type { OrderStatus } from "@amanda/shared";
 import { Resend } from "resend";
 import { env, isResendConfigured } from "../../config/env.js";
 import {
   adminInviteTemplate,
   adminPromotedTemplate,
   adminRevokedTemplate,
+  orderConfirmationTemplate,
+  orderStatusChangeTemplate,
   passwordResetTemplate,
   welcomeTemplate,
 } from "./templates.js";
@@ -69,5 +72,22 @@ export function sendAdminPromotedEmail(user: { email: string; firstName: string 
 
 export function sendAdminRevokedEmail(user: { email: string; firstName: string }): void {
   const { subject, html } = adminRevokedTemplate(user.firstName);
+  void sendEmail({ to: user.email, subject, html });
+}
+
+export function sendOrderConfirmationEmail(
+  user: { email: string; firstName: string },
+  order: { orderNumber: number; total: number },
+): void {
+  const { subject, html } = orderConfirmationTemplate(user.firstName, order);
+  void sendEmail({ to: user.email, subject, html });
+}
+
+export function sendOrderStatusChangeEmail(
+  user: { email: string; firstName: string },
+  order: { orderNumber: number },
+  newStatus: OrderStatus,
+): void {
+  const { subject, html } = orderStatusChangeTemplate(user.firstName, order, newStatus);
   void sendEmail({ to: user.email, subject, html });
 }
