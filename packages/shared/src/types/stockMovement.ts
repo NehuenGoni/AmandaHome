@@ -18,6 +18,7 @@ export interface StockMovement {
   newStock: number;
   reference?: string;
   note?: string;
-  createdBy: string;
+  /** Ausente en movimientos automáticos del sistema (venta, reposición por cancelación). */
+  createdBy?: string;
   createdAt: string;
 }

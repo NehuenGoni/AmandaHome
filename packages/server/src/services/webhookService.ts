@@ -1,7 +1,7 @@
 import { Order } from "../models/Order.js";
 import { User } from "../models/User.js";
-import { restockItems, type StockDecrement } from "./checkoutService.js";
 import { sendOrderConfirmationEmail } from "./email/emailService.js";
+import { returnStock } from "./inventoryService.js";
 import { fetchPayment } from "./paymentService.js";
 
 /**
@@ -42,12 +42,15 @@ export async function handlePaymentWebhook(paymentId: string | undefined): Promi
         sendOrderConfirmationEmail(customer, { orderNumber: order.orderNumber, total: order.total });
       }
     } else if ((payment.status === "rejected" || payment.status === "cancelled") && order.status === "pending") {
-      const decrements: StockDecrement[] = order.items.map((item) => ({
-        product: item.product,
+      const items = order.items.map((item) => ({
+        product: item.product.toString(),
         variantSku: item.variantSku,
         quantity: item.quantity,
       }));
-      await restockItems(decrements);
+      await returnStock(items, {
+        reference: order._id.toString(),
+        note: "Pago rechazado o cancelado por Mercado Pago",
+      });
 
       order.status = "cancelled";
       order.statusHistory.push({

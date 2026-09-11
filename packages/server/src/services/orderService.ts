@@ -3,8 +3,8 @@ import { Types, type FilterQuery } from "mongoose";
 import { Order, type IOrder, type OrderDocument } from "../models/Order.js";
 import { User } from "../models/User.js";
 import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/AppError.js";
-import { restockItems, type StockDecrement } from "./checkoutService.js";
 import { sendOrderStatusChangeEmail } from "./email/emailService.js";
+import { returnStock } from "./inventoryService.js";
 import type {
   AdminListOrdersQuery,
   AttachReceiptInput,
@@ -96,12 +96,16 @@ export async function updateOrderStatus(
   }
 
   if (input.status === "cancelled") {
-    const decrements: StockDecrement[] = order.items.map((item) => ({
-      product: item.product,
+    const items = order.items.map((item) => ({
+      product: item.product.toString(),
       variantSku: item.variantSku,
       quantity: item.quantity,
     }));
-    await restockItems(decrements);
+    await returnStock(items, {
+      reference: order._id.toString(),
+      note: input.note ?? "Pedido cancelado por un administrador",
+      createdBy: adminId,
+    });
   }
 
   order.status = input.status;

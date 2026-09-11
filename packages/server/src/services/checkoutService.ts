@@ -7,6 +7,7 @@ import { Product } from "../models/Product.js";
 import { User } from "../models/User.js";
 import { BadRequestError, NotFoundError } from "../utils/AppError.js";
 import type { CreateCheckoutInput } from "../validators/checkoutValidators.js";
+import { recordMovements, type StockChange } from "./inventoryService.js";
 import { createPaymentPreference } from "./paymentService.js";
 
 const SHIPPING_COSTS: Record<string, number> = {
@@ -24,21 +25,33 @@ export interface StockDecrement {
 /**
  * Sin transacciones multi-doc: cada decremento es atómico por sí solo
  * (findOneAndUpdate con filtro de stock suficiente), y si uno falla se
- * revierten manualmente los que ya se aplicaron.
+ * revierten manualmente los que ya se aplicaron (sin dejar constancia en
+ * el log: la venta nunca llegó a concretarse). Los movimientos reales se
+ * registran recién si la orden se crea con éxito.
  */
-async function decrementStock(items: StockDecrement[]): Promise<void> {
+async function decrementStock(items: StockDecrement[]): Promise<StockChange[]> {
   const applied: StockDecrement[] = [];
+  const changes: StockChange[] = [];
   try {
     for (const item of items) {
-      const result = await Product.findOneAndUpdate(
+      const before = await Product.findOneAndUpdate(
         { _id: item.product, "variants.sku": item.variantSku, "variants.stock": { $gte: item.quantity } },
         { $inc: { "variants.$.stock": -item.quantity } },
       );
-      if (!result) {
+      const variant = before?.variants.find((v) => v.sku === item.variantSku);
+      if (!before || !variant) {
         throw new BadRequestError(`Stock insuficiente para ${item.variantSku}`);
       }
       applied.push(item);
+      changes.push({
+        product: item.product.toString(),
+        variantSku: item.variantSku,
+        quantity: -item.quantity,
+        previousStock: variant.stock,
+        newStock: variant.stock - item.quantity,
+      });
     }
+    return changes;
   } catch (err) {
     await restockItems(applied);
     throw err;
@@ -106,7 +119,7 @@ export async function createOrderFromCart(
   // La Order se crea en pending y el stock se descuenta ANTES de contactar
   // al gateway: si Mercado Pago falla después, la orden queda pending y el
   // stock ya reservado; el admin puede cancelarla manualmente si hace falta.
-  await decrementStock(stockDecrements);
+  const stockChanges = await decrementStock(stockDecrements);
 
   const orderNumber = await getNextSequence("orderNumber");
 
@@ -142,6 +155,11 @@ export async function createOrderFromCart(
   }
 
   await Cart.updateOne({ user: userId }, { $set: { items: [] } });
+  await recordMovements(stockChanges, {
+    type: "sale_out",
+    reference: order._id.toString(),
+    createdBy: userId,
+  });
 
   const { preferenceId, initPoint } = await createPaymentPreference(order);
   order.paymentDetails = { preferenceId };

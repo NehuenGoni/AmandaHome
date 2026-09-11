@@ -15,6 +15,7 @@ import { cartRouter } from "./routes/cartRoutes.js";
 import { categoryRouter } from "./routes/categoryRoutes.js";
 import { checkoutRouter } from "./routes/checkoutRoutes.js";
 import { checkoutWebhookRouter } from "./routes/checkoutWebhookRoutes.js";
+import { inventoryRouter } from "./routes/inventoryRoutes.js";
 import { orderRouter } from "./routes/orderRoutes.js";
 import { productRouter } from "./routes/productRoutes.js";
 import { uploadRouter } from "./routes/uploadRoutes.js";
@@ -50,9 +51,10 @@ export function createApp() {
   app.use("/api/checkout", checkoutRouter);
   app.use("/api/admin/orders", adminOrderRouter);
   app.use("/api/orders", orderRouter);
+  app.use("/api/inventory", inventoryRouter);
 
-  // El resto de las rutas de negocio (inventory, supplier-purchases, ...) se
-  // montan acá a medida que avanzan las siguientes fases.
+  // El resto de las rutas de negocio (supplier-purchases) se montan acá a
+  // medida que avanzan las siguientes fases.
 
   app.use(notFoundHandler);
   app.use(errorHandler);
