@@ -1,1 +1,1 @@
-{"root":["./src/app.test.tsx","./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/test/setup.ts"],"version":"5.9.3"}
+{"root":["./src/app.test.tsx","./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/contexts/authcontext.test.tsx","./src/contexts/authcontext.tsx","./src/contexts/cartcontext.test.tsx","./src/contexts/cartcontext.tsx","./src/lib/apiclient.test.ts","./src/lib/apiclient.ts","./src/lib/authapi.ts","./src/lib/cartapi.ts","./src/lib/cartstorage.ts","./src/test/setup.ts","./src/types/cart.ts"],"version":"5.9.3"}
