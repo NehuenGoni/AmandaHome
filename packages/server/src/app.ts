@@ -20,6 +20,7 @@ import { orderRouter } from "./routes/orderRoutes.js";
 import { productRouter } from "./routes/productRoutes.js";
 import { supplierPurchaseRouter } from "./routes/supplierPurchaseRoutes.js";
 import { uploadRouter } from "./routes/uploadRoutes.js";
+import { userRouter } from "./routes/userRoutes.js";
 
 export function createApp() {
   const app = express();
@@ -54,6 +55,7 @@ export function createApp() {
   app.use("/api/orders", orderRouter);
   app.use("/api/inventory", inventoryRouter);
   app.use("/api/supplier-purchases", supplierPurchaseRouter);
+  app.use("/api/users", userRouter);
 
   // Con esto queda montada toda la API de negocio del backend.
 

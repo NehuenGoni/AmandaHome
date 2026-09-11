@@ -81,4 +81,6 @@
   --color-accent2: var(--accent2);
   --color-accent2-deep: var(--accent2-deep);
   --color-support: var(--support);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
 }

@@ -1,7 +1,22 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 @import "./styles/tokens.css";
+
+:root {
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Work Sans", system-ui, -apple-system, sans-serif;
+}
 
 body {
   background-color: var(--bg);
   color: var(--text);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+}
+
+* {
+  scrollbar-color: var(--border) transparent;
 }

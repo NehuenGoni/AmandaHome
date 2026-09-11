@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import mongoose, { Schema, model, type HydratedDocument, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, Types, type HydratedDocument, type Model } from "mongoose";
 import type { Role } from "@amanda/shared";
 
 const SALT_ROUNDS = 10;
@@ -24,7 +24,7 @@ export interface IUser {
   lastName: string;
   phone?: string;
   role: Role;
-  addresses: IAddress[];
+  addresses: Types.DocumentArray<IAddress>;
   isActive: boolean;
 }
 

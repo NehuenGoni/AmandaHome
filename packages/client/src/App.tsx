@@ -1,21 +1,64 @@
-import { formatMoney } from "@amanda/shared";
+import { Route, Routes } from "react-router-dom";
+import { AccountLayout } from "@/components/layout/AccountLayout";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
+import { PublicLayout } from "@/components/layout/PublicLayout";
+import AcceptInvite from "@/pages/AcceptInvite";
+import AccountAddresses from "@/pages/account/AccountAddresses";
+import AccountOrderDetail from "@/pages/account/AccountOrderDetail";
+import AccountOrders from "@/pages/account/AccountOrders";
+import AccountProfile from "@/pages/account/AccountProfile";
+import Cart from "@/pages/Cart";
+import Catalog from "@/pages/Catalog";
+import Checkout from "@/pages/Checkout";
+import ForgotPassword from "@/pages/ForgotPassword";
+import Home from "@/pages/Home";
+import Login from "@/pages/Login";
+import NotFound from "@/pages/NotFound";
+import OrderConfirmation from "@/pages/OrderConfirmation";
+import ProductDetail from "@/pages/ProductDetail";
+import Register from "@/pages/Register";
+import ResetPassword from "@/pages/ResetPassword";
 
-/**
- * Placeholder de la Fase 0: valida que el monorepo, Tailwind y la paleta de
- * marca funcionan de punta a punta. Las rutas reales llegan en las fases de
- * frontend público / cuenta / admin.
- */
 export default function App() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg px-6 text-center">
-      <h1 className="text-3xl font-semibold text-text">Amanda Home & Deco</h1>
-      <p className="text-text-muted">Plataforma e-commerce — scaffolding en construcción</p>
-      <button
-        type="button"
-        className="rounded-md bg-primary px-5 py-2.5 font-medium text-on-primary transition-colors hover:bg-primary-strong"
-      >
-        Precio de ejemplo: {formatMoney(199900)}
-      </button>
-    </main>
+    <Routes>
+      <Route element={<PublicLayout />}>
+        <Route index element={<Home />} />
+        <Route path="catalogo" element={<Catalog />} />
+        <Route path="productos/:slug" element={<ProductDetail />} />
+        <Route path="carrito" element={<Cart />} />
+        <Route
+          path="checkout"
+          element={
+            <ProtectedRoute>
+              <Checkout />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="order-confirmation/:id"
+          element={
+            <ProtectedRoute>
+              <OrderConfirmation />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="login" element={<Login />} />
+        <Route path="registro" element={<Register />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password" element={<ResetPassword />} />
+        <Route path="accept-invite" element={<AcceptInvite />} />
+
+        <Route path="cuenta" element={<AccountLayout />}>
+          <Route index element={<AccountProfile />} />
+          <Route path="pedidos" element={<AccountOrders />} />
+          <Route path="pedidos/:id" element={<AccountOrderDetail />} />
+          <Route path="direcciones" element={<AccountAddresses />} />
+        </Route>
+
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
   );
 }

@@ -11,6 +11,8 @@ interface AuthContextValue {
   register: (input: authApi.RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
   acceptInvite: (input: authApi.AcceptInviteInput) => Promise<void>;
+  /** Actualiza el usuario en memoria tras una respuesta del backend (editar perfil, direcciones). */
+  setUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -77,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, isAuthenticated: user !== null, login, register, logout, acceptInvite }),
+    () => ({ user, isLoading, isAuthenticated: user !== null, login, register, logout, acceptInvite, setUser }),
     [user, isLoading, login, register, logout, acceptInvite],
   );
 

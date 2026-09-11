@@ -41,7 +41,9 @@ export async function createPaymentPreference(order: OrderDocument): Promise<Pay
     });
   }
 
-  const confirmationUrl = `${env.CLIENT_URL}/order-confirmation/${order.orderNumber}`;
+  // Usamos el _id (no el orderNumber) porque es lo que el endpoint de
+  // detalle de pedido del cliente acepta.
+  const confirmationUrl = `${env.CLIENT_URL}/order-confirmation/${order._id.toString()}`;
 
   const response = await preference.create({
     body: {
