@@ -17,7 +17,7 @@ const variantClasses: Record<Variant, string> = {
   primary: "bg-primary text-on-primary hover:bg-primary-strong",
   secondary: "border border-border bg-surface text-text hover:bg-surface-alt",
   ghost: "text-text hover:bg-surface-alt",
-  danger: "bg-accent2 text-white hover:bg-accent2-deep",
+  danger: "bg-accent2 text-on-accent2 hover:bg-accent2-deep",
 };
 
 const sizeClasses: Record<Size, string> = {

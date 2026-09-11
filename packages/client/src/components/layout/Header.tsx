@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { LogOut, Menu, Package, ShoppingBag, User as UserIcon, X } from "lucide-react";
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,8 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
+
           <Link
             to="/carrito"
             aria-label="Ver carrito"
@@ -65,7 +68,7 @@ export function Header() {
                   animate={{ scale: 1 }}
                   exit={{ scale: 0 }}
                   transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  className="absolute -right-0.5 -top-0.5 flex size-4.5 items-center justify-center rounded-full bg-accent2 text-[10px] font-semibold text-white"
+                  className="absolute -right-0.5 -top-0.5 flex size-4.5 items-center justify-center rounded-full bg-accent2 text-[10px] font-semibold text-on-accent2"
                 >
                   {itemCount}
                 </motion.span>

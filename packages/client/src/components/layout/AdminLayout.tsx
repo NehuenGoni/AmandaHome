@@ -1,6 +1,7 @@
 import { LogOut, Store } from "lucide-react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { AdminNav } from "@/components/admin/AdminNav";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageTransition } from "./PageTransition";
 import { ProtectedRoute } from "./ProtectedRoute";
@@ -24,6 +25,7 @@ export function AdminLayout() {
             </Link>
             <div className="flex items-center gap-3">
               <span className="hidden text-sm text-text-muted sm:inline">{user?.email}</span>
+              <ThemeToggle />
               <Link
                 to="/"
                 className="flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium text-text transition-colors hover:bg-surface-alt"

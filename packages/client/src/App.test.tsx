@@ -8,6 +8,7 @@ import * as productsApi from "@/lib/productsApi";
 import App from "./App.js";
 import { AuthProvider } from "./contexts/AuthContext.js";
 import { CartProvider } from "./contexts/CartContext.js";
+import { ThemeProvider } from "./contexts/ThemeContext.js";
 
 vi.mock("@/lib/authApi");
 vi.mock("@/lib/cartApi");
@@ -22,11 +23,13 @@ vi.mocked(categoriesApi.listCategories).mockResolvedValue({ categories: [] });
 function renderApp() {
   return render(
     <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <App />
-        </CartProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <CartProvider>
+            <App />
+          </CartProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>,
   );
 }

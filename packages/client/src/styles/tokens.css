@@ -13,11 +13,14 @@
   --color-terracota: #b75e37;
   --color-madera-natural: #cba379;
 
-  /* Tokens de interfaz — modo claro (por defecto) */
-  --bg: #f5f0e4;
-  --surface: #fbf8f1;
-  --surface-alt: #ece4d0;
-  --border: #dcd2bb;
+  /* Tokens de interfaz — modo claro (por defecto).
+     El lienzo (--bg) es un arena más profundo que --color-crema-lino, y las
+     tarjetas (--surface) retoman el crema-lino directamente: así el crema
+     queda visible en toda la interfaz en vez de disolverse hacia blanco. */
+  --bg: #f0e4cc;
+  --surface: #f5f0e4;
+  --surface-alt: #e9dcbd;
+  --border: #d9c7a0;
   --text: #211e1a;
   --text-muted: #6b6252;
   --primary: #211e1a;
@@ -28,8 +31,17 @@
   --accent2: #b75e37;
   --accent2-deep: #954a2a;
   --support: #7c8969;
+  --on-accent2: #f5f0e4;
+
+  color-scheme: light;
 }
 
+/*
+ * Los valores oscuros están escritos dos veces a propósito:
+ * - @media (prefers-color-scheme: dark) es el respaldo cuando no corrió JavaScript (sin flash de tema).
+ * - :root.dark es la clase explícita que aplica ThemeContext (contexts/ThemeContext.tsx) y manda cuando está presente.
+ * Si se retocan valores, hay que tocar los dos bloques.
+ */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     --bg: #1b1912;
@@ -46,6 +58,9 @@
     --accent2: #d07a4c;
     --accent2-deep: #e2956a;
     --support: #a3b18a;
+    --on-accent2: #1b1912;
+
+    color-scheme: dark;
   }
 }
 
@@ -64,6 +79,9 @@
   --accent2: #d07a4c;
   --accent2-deep: #e2956a;
   --support: #a3b18a;
+  --on-accent2: #1b1912;
+
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -80,6 +98,7 @@
   --color-accent-deep: var(--accent-deep);
   --color-accent2: var(--accent2);
   --color-accent2-deep: var(--accent2-deep);
+  --color-on-accent2: var(--on-accent2);
   --color-support: var(--support);
   --font-display: var(--font-display);
   --font-body: var(--font-body);
