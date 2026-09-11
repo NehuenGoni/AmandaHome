@@ -14,6 +14,9 @@ export default defineConfig({
       JWT_REFRESH_SECRET: "test-refresh-secret-0123456789-0123456789",
       JWT_ACCESS_EXPIRES_IN: "15m",
       JWT_REFRESH_EXPIRES_IN: "30d",
+      CLOUDINARY_CLOUD_NAME: "test-cloud",
+      CLOUDINARY_API_KEY: "test-api-key",
+      CLOUDINARY_API_SECRET: "test-api-secret",
     },
   },
 });

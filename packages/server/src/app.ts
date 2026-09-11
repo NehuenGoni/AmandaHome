@@ -12,6 +12,7 @@ import { adminRouter } from "./routes/adminRoutes.js";
 import { authRouter } from "./routes/authRoutes.js";
 import { categoryRouter } from "./routes/categoryRoutes.js";
 import { productRouter } from "./routes/productRoutes.js";
+import { uploadRouter } from "./routes/uploadRoutes.js";
 
 export function createApp() {
   const app = express();
@@ -37,6 +38,7 @@ export function createApp() {
   app.use("/api/categories", categoryRouter);
   app.use("/api/admin/products", adminProductRouter);
   app.use("/api/products", productRouter);
+  app.use("/api/uploads", uploadRouter);
 
   // El resto de las rutas de negocio (orders, cart, checkout, ...) se
   // montan acá a medida que avanzan las siguientes fases.
