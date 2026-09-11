@@ -6,6 +6,7 @@ import helmet from "helmet";
 import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
+import { adminRouter } from "./routes/adminRoutes.js";
 import { authRouter } from "./routes/authRoutes.js";
 
 export function createApp() {
@@ -27,9 +28,10 @@ export function createApp() {
   });
 
   app.use("/api/auth", authRouter);
+  app.use("/api/admin", adminRouter);
 
-  // El resto de las rutas de negocio (admin, products, orders, ...) se
-  // montan acá a medida que avanzan las siguientes fases.
+  // El resto de las rutas de negocio (products, orders, ...) se montan acá
+  // a medida que avanzan las siguientes fases.
 
   app.use(notFoundHandler);
   app.use(errorHandler);

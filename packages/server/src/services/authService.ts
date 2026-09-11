@@ -30,7 +30,7 @@ async function issueTokenPair(user: Pick<UserDocument, "_id" | "role">): Promise
   return { accessToken, refreshToken };
 }
 
-async function revokeAllUserRefreshTokens(userId: string): Promise<void> {
+export async function revokeAllUserRefreshTokens(userId: string): Promise<void> {
   await RefreshToken.updateMany(
     { user: userId, revokedAt: { $exists: false } },
     { $set: { revokedAt: new Date() } },
