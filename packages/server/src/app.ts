@@ -7,9 +7,11 @@ import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { adminCategoryRouter } from "./routes/adminCategoryRoutes.js";
+import { adminProductRouter } from "./routes/adminProductRoutes.js";
 import { adminRouter } from "./routes/adminRoutes.js";
 import { authRouter } from "./routes/authRoutes.js";
 import { categoryRouter } from "./routes/categoryRoutes.js";
+import { productRouter } from "./routes/productRoutes.js";
 
 export function createApp() {
   const app = express();
@@ -33,9 +35,11 @@ export function createApp() {
   app.use("/api/admin", adminRouter);
   app.use("/api/admin/categories", adminCategoryRouter);
   app.use("/api/categories", categoryRouter);
+  app.use("/api/admin/products", adminProductRouter);
+  app.use("/api/products", productRouter);
 
-  // El resto de las rutas de negocio (products, orders, ...) se montan acá
-  // a medida que avanzan las siguientes fases.
+  // El resto de las rutas de negocio (orders, cart, checkout, ...) se
+  // montan acá a medida que avanzan las siguientes fases.
 
   app.use(notFoundHandler);
   app.use(errorHandler);
