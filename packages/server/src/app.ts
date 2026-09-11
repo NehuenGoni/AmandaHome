@@ -12,6 +12,8 @@ import { adminRouter } from "./routes/adminRoutes.js";
 import { authRouter } from "./routes/authRoutes.js";
 import { cartRouter } from "./routes/cartRoutes.js";
 import { categoryRouter } from "./routes/categoryRoutes.js";
+import { checkoutRouter } from "./routes/checkoutRoutes.js";
+import { checkoutWebhookRouter } from "./routes/checkoutWebhookRoutes.js";
 import { productRouter } from "./routes/productRoutes.js";
 import { uploadRouter } from "./routes/uploadRoutes.js";
 
@@ -22,9 +24,11 @@ export function createApp() {
   app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
   app.use(cookieParser());
 
-  // El webhook de pagos (Fase 8) se monta acá, antes del sanitizador y con su
-  // propio parser de body: necesita el payload crudo para no romper la
-  // verificación de la notificación contra la API del gateway.
+  // El webhook de pagos se monta antes del sanitizador y con su propio
+  // parser: el handler nunca confía en este payload de todas formas (siempre
+  // re-consulta el pago real contra la API del gateway), pero mongoSanitize
+  // no debe tocar una notificación externa antes de leerla.
+  app.use("/api/checkout/webhook", express.json(), checkoutWebhookRouter);
 
   app.use(express.json());
   app.use(mongoSanitize());
@@ -41,9 +45,10 @@ export function createApp() {
   app.use("/api/products", productRouter);
   app.use("/api/uploads", uploadRouter);
   app.use("/api/cart", cartRouter);
+  app.use("/api/checkout", checkoutRouter);
 
-  // El resto de las rutas de negocio (orders, checkout, inventory, ...) se
-  // montan acá a medida que avanzan las siguientes fases.
+  // El resto de las rutas de negocio (orders, inventory, supplier-purchases,
+  // ...) se montan acá a medida que avanzan las siguientes fases.
 
   app.use(notFoundHandler);
   app.use(errorHandler);

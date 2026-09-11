@@ -1,0 +1,57 @@
+import { Order } from "../models/Order.js";
+import { restockItems, type StockDecrement } from "./checkoutService.js";
+import { fetchPayment } from "./paymentService.js";
+
+/**
+ * Nunca lanza: el controller siempre responde 200 a Mercado Pago para no
+ * disparar reintentos agresivos ante un problema transitorio nuestro.
+ * Idempotente: reprocesar la misma notificación no duplica efectos.
+ */
+export async function handlePaymentWebhook(paymentId: string | undefined): Promise<void> {
+  if (!paymentId) return;
+
+  try {
+    const payment = await fetchPayment(paymentId);
+    if (!payment.externalReference) return;
+
+    const order = await Order.findById(payment.externalReference);
+    if (!order) return;
+
+    if (order.paymentStatus === payment.status) return; // ya procesado
+
+    order.paymentStatus = payment.status;
+    order.paymentDetails = {
+      ...order.paymentDetails,
+      paymentId: payment.id,
+      mpStatus: payment.rawStatus,
+      mpStatusDetail: payment.statusDetail,
+    };
+
+    if (payment.status === "approved" && order.status === "pending") {
+      order.status = "confirmed";
+      order.statusHistory.push({
+        status: "confirmed",
+        changedAt: new Date(),
+        note: "Pago aprobado por Mercado Pago",
+      });
+    } else if ((payment.status === "rejected" || payment.status === "cancelled") && order.status === "pending") {
+      const decrements: StockDecrement[] = order.items.map((item) => ({
+        product: item.product,
+        variantSku: item.variantSku,
+        quantity: item.quantity,
+      }));
+      await restockItems(decrements);
+
+      order.status = "cancelled";
+      order.statusHistory.push({
+        status: "cancelled",
+        changedAt: new Date(),
+        note: "Pago rechazado o cancelado por Mercado Pago, stock repuesto",
+      });
+    }
+
+    await order.save();
+  } catch (err) {
+    console.error("[webhook] error procesando notificación de pago:", err);
+  }
+}
