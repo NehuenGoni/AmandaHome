@@ -18,6 +18,7 @@ import { checkoutWebhookRouter } from "./routes/checkoutWebhookRoutes.js";
 import { inventoryRouter } from "./routes/inventoryRoutes.js";
 import { orderRouter } from "./routes/orderRoutes.js";
 import { productRouter } from "./routes/productRoutes.js";
+import { supplierPurchaseRouter } from "./routes/supplierPurchaseRoutes.js";
 import { uploadRouter } from "./routes/uploadRoutes.js";
 
 export function createApp() {
@@ -52,9 +53,9 @@ export function createApp() {
   app.use("/api/admin/orders", adminOrderRouter);
   app.use("/api/orders", orderRouter);
   app.use("/api/inventory", inventoryRouter);
+  app.use("/api/supplier-purchases", supplierPurchaseRouter);
 
-  // El resto de las rutas de negocio (supplier-purchases) se montan acá a
-  // medida que avanzan las siguientes fases.
+  // Con esto queda montada toda la API de negocio del backend.
 
   app.use(notFoundHandler);
   app.use(errorHandler);
