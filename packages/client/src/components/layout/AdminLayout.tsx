@@ -3,6 +3,7 @@ import { Link, Outlet, useNavigate } from "react-router-dom";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
+import { Logo } from "./Logo";
 import { PageTransition } from "./PageTransition";
 import { ProtectedRoute } from "./ProtectedRoute";
 
@@ -20,8 +21,8 @@ export function AdminLayout() {
       <div className="min-h-screen bg-bg">
         <header className="sticky top-0 z-40 border-b border-border bg-surface">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-            <Link to="/admin" className="font-display text-lg tracking-tight text-text">
-              Amanda <span className="text-accent-deep">Admin</span>
+            <Link to="/admin" aria-label="Amanda Home & Deco">
+              <Logo className="h-8 w-auto" />
             </Link>
             <div className="flex items-center gap-3">
               <span className="hidden text-sm text-text-muted sm:inline">{user?.email}</span>

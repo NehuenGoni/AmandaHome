@@ -1,14 +1,25 @@
+import { Instagram } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Logo } from "./Logo";
 
 export function Footer() {
   return (
     <footer className="border-t border-border bg-surface">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="font-display text-lg text-text">Amanda Home & Deco</p>
+          <Logo className="h-8 w-auto" />
           <p className="mt-1 max-w-xs text-sm text-text-muted">
             Textiles, cerámica y objetos que hacen de tu casa un lugar propio.
           </p>
+          <a
+            href="https://www.instagram.com/homedecoamanda/"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Instagram de Amanda Home & Deco"
+            className="mt-3 inline-flex text-text-muted transition-colors hover:text-accent-deep"
+          >
+            <Instagram className="size-5" />
+          </a>
         </div>
         <div className="flex gap-10 text-sm">
           <div className="flex flex-col gap-2">
