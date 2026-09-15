@@ -1,4 +1,9 @@
-const API_BASE = "/api";
+/**
+ * En dev, "/api" alcanza gracias al proxy de Vite hacia localhost:4000.
+ * En producción, client (Vercel) y server (Fly.io) están en dominios distintos,
+ * así que VITE_API_URL debe apuntar a la URL pública del server (con /api al final).
+ */
+const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 export class ApiError extends Error {
   status: number;

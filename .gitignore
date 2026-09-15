@@ -13,3 +13,6 @@ npm-debug.log*
 .vercel
 .vscode/*
 !.vscode/extensions.json
+
+.vercel
+.env*

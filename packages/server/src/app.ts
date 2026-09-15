@@ -25,6 +25,10 @@ import { userRouter } from "./routes/userRoutes.js";
 export function createApp() {
   const app = express();
 
+  // Fly.io termina TLS en su edge y reenvía por proxy interno: sin esto,
+  // express-rate-limit lee la IP del proxy en vez de la del cliente real.
+  app.set("trust proxy", 1);
+
   app.use(helmet());
   app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
   app.use(cookieParser());

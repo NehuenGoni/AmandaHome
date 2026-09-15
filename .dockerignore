@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/build
+**/coverage
+.git
+.vscode
+*.log
+.env
+.env.*
+!.env.example
+packages/client/public
+packages/client/index.html
