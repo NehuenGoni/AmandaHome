@@ -1,9 +1,19 @@
 import { Types } from "mongoose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+const mockPreferenceCreate = vi.fn();
+const mockRefundTotal = vi.fn();
+
+vi.mock("mercadopago", () => ({
+  MercadoPagoConfig: vi.fn().mockImplementation(() => ({})),
+  Preference: vi.fn().mockImplementation(() => ({ create: mockPreferenceCreate })),
+  Payment: vi.fn().mockImplementation(() => ({ get: vi.fn() })),
+  PaymentRefund: vi.fn().mockImplementation(() => ({ total: mockRefundTotal })),
+}));
+
 vi.mock("./email/emailService.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./email/emailService.js")>();
-  return { ...actual, sendOrderStatusChangeEmail: vi.fn() };
+  return { ...actual, sendOrderStatusChangeEmail: vi.fn(), sendOrderConfirmationEmail: vi.fn() };
 });
 
 const { Category } = await import("../models/Category.js");
@@ -12,7 +22,7 @@ const { Order } = await import("../models/Order.js");
 const { User } = await import("../models/User.js");
 const { clearTestDB, closeTestDB, connectTestDB } = await import("../test/dbTestUtils.js");
 const orderService = await import("./orderService.js");
-const { sendOrderStatusChangeEmail } = await import("./email/emailService.js");
+const { sendOrderStatusChangeEmail, sendOrderConfirmationEmail } = await import("./email/emailService.js");
 
 beforeAll(connectTestDB);
 afterEach(() => {
@@ -47,7 +57,9 @@ async function createOrderFor(customerId: Types.ObjectId, overrides: Partial<Rec
       {
         product: product._id,
         productName: product.name,
-        variantSku: `SKU-${unique}`,
+        // El schema de Product fuerza el sku a mayúsculas: hay que usar el
+        // valor real guardado, no el string original en minúsculas.
+        variantSku: product.variants[0]!.sku,
         attributeName: "Color",
         attributeValue: "Verde",
         unitPrice: 250000,
@@ -193,5 +205,209 @@ describe("updateOrderStatus", () => {
       new Types.ObjectId().toString(),
     );
     expect(updated.trackingNumber).toBe("TRACK-123");
+  });
+});
+
+// Mongoose marca "createdAt" como immutable cuando timestamps:true, así que un
+// updateOne normal lo ignora: hay que pisarlo con el driver nativo.
+async function setCreatedAt(orderId: Types.ObjectId, createdAt: Date) {
+  await Order.collection.updateOne({ _id: orderId }, { $set: { createdAt } });
+}
+
+describe("payMyOrder", () => {
+  it("devuelve el link guardado si la preferencia sigue vigente", async () => {
+    const userId = new Types.ObjectId();
+    const { order } = await createOrderFor(userId, {
+      status: "pending",
+      paymentStatus: "pending",
+      paymentDetails: {
+        preferenceId: "pref-1",
+        initPoint: "https://mp.test/existing",
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+
+    const result = await orderService.payMyOrder(userId.toString(), order._id.toString());
+
+    expect(result.checkoutUrl).toBe("https://mp.test/existing");
+    expect(mockPreferenceCreate).not.toHaveBeenCalled();
+  });
+
+  it("crea una preferencia nueva si no hay link guardado o el guardado venció", async () => {
+    mockPreferenceCreate.mockResolvedValue({ id: "pref-2", init_point: "https://mp.test/new" });
+    const userId = new Types.ObjectId();
+    const { order } = await createOrderFor(userId, {
+      status: "pending",
+      paymentStatus: "pending",
+      paymentDetails: {
+        preferenceId: "pref-1",
+        initPoint: "https://mp.test/expired",
+        expiresAt: new Date(Date.now() - 60 * 60 * 1000),
+      },
+    });
+
+    const result = await orderService.payMyOrder(userId.toString(), order._id.toString());
+
+    expect(result.checkoutUrl).toBe("https://mp.test/new");
+    expect(mockPreferenceCreate).toHaveBeenCalledTimes(1);
+
+    const updated = await Order.findById(order._id);
+    expect((updated?.paymentDetails as { initPoint?: string })?.initPoint).toBe("https://mp.test/new");
+  });
+
+  it("rechaza el pedido de otro usuario", async () => {
+    const userId = new Types.ObjectId();
+    const { order } = await createOrderFor(userId, { status: "pending", paymentStatus: "pending" });
+
+    await expect(
+      orderService.payMyOrder(new Types.ObjectId().toString(), order._id.toString()),
+    ).rejects.toThrow();
+  });
+
+  it("rechaza un pedido que ya no está pendiente", async () => {
+    const userId = new Types.ObjectId();
+    const { order } = await createOrderFor(userId, { status: "confirmed" });
+
+    await expect(orderService.payMyOrder(userId.toString(), order._id.toString())).rejects.toThrow();
+  });
+
+  it("rechaza un pedido vencido", async () => {
+    const userId = new Types.ObjectId();
+    const { order } = await createOrderFor(userId, { status: "pending", paymentStatus: "pending" });
+    await setCreatedAt(order._id, new Date(Date.now() - 26 * 60 * 60 * 1000));
+
+    await expect(orderService.payMyOrder(userId.toString(), order._id.toString())).rejects.toThrow();
+  });
+});
+
+describe("expireStalePendingOrders", () => {
+  it("vence pedidos pending viejos y repone el stock", async () => {
+    const { order, product } = await createOrderFor(new Types.ObjectId(), {
+      status: "pending",
+      paymentStatus: "pending",
+    });
+    await setCreatedAt(order._id, new Date(Date.now() - 26 * 60 * 60 * 1000));
+
+    const expired = await orderService.expireStalePendingOrders();
+
+    expect(expired).toBe(1);
+    const updated = await Order.findById(order._id);
+    expect(updated?.status).toBe("cancelled");
+    const updatedProduct = await Product.findById(product._id);
+    expect(updatedProduct?.variants[0]?.stock).toBe(5); // 3 + 2 repuestas
+  });
+
+  it("no toca pedidos pending recientes", async () => {
+    const { order } = await createOrderFor(new Types.ObjectId(), {
+      status: "pending",
+      paymentStatus: "pending",
+    });
+
+    const expired = await orderService.expireStalePendingOrders();
+
+    expect(expired).toBe(0);
+    const updated = await Order.findById(order._id);
+    expect(updated?.status).toBe("pending");
+  });
+
+  it("le da más margen a un pago en efectivo en proceso (Rapipago/Pago Fácil)", async () => {
+    const { order } = await createOrderFor(new Types.ObjectId(), {
+      status: "pending",
+      paymentStatus: "pending",
+      paymentDetails: { paymentId: "pay-cash-1", mpStatus: "pending" },
+    });
+    await setCreatedAt(order._id, new Date(Date.now() - 26 * 60 * 60 * 1000)); // vencería un pedido normal
+
+    const expired = await orderService.expireStalePendingOrders();
+
+    expect(expired).toBe(0);
+    const updated = await Order.findById(order._id);
+    expect(updated?.status).toBe("pending");
+  });
+
+  it("no repone el stock dos veces si se corre dos veces", async () => {
+    const { order, product } = await createOrderFor(new Types.ObjectId(), {
+      status: "pending",
+      paymentStatus: "pending",
+    });
+    await setCreatedAt(order._id, new Date(Date.now() - 26 * 60 * 60 * 1000));
+
+    await orderService.expireStalePendingOrders();
+    const secondRun = await orderService.expireStalePendingOrders();
+
+    expect(secondRun).toBe(0);
+    const updatedProduct = await Product.findById(product._id);
+    expect(updatedProduct?.variants[0]?.stock).toBe(5); // no se repuso dos veces
+  });
+});
+
+describe("reactivateOrder", () => {
+  it("reactiva un pedido cancelado con paymentIssue si hay stock disponible", async () => {
+    const customer = await User.create({
+      email: `cliente-${Date.now()}-${Math.random()}@example.com`,
+      password: "supersecreto123",
+      firstName: "Cliente",
+      lastName: "Test",
+    });
+    const { order } = await createOrderFor(customer._id, {
+      status: "cancelled",
+      paymentIssue: { reason: "approved_on_cancelled", paymentId: "pay-late-1", flaggedAt: new Date() },
+    });
+
+    const updated = await orderService.reactivateOrder(order._id.toString(), new Types.ObjectId().toString());
+
+    expect(updated.status).toBe("confirmed");
+    expect(updated.paymentIssue?.resolution).toBe("reactivated");
+    expect(updated.paymentIssue?.resolvedAt).toBeDefined();
+    expect(sendOrderConfirmationEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("falla si ya no hay stock suficiente", async () => {
+    const { order, product } = await createOrderFor(new Types.ObjectId(), {
+      status: "cancelled",
+      paymentIssue: { reason: "approved_on_cancelled", paymentId: "pay-late-2", flaggedAt: new Date() },
+    });
+    await Product.updateOne({ _id: product._id }, { $set: { "variants.0.stock": 0 } });
+
+    await expect(
+      orderService.reactivateOrder(order._id.toString(), new Types.ObjectId().toString()),
+    ).rejects.toThrow();
+
+    const untouched = await Order.findById(order._id);
+    expect(untouched?.status).toBe("cancelled");
+    expect(untouched?.paymentIssue?.resolvedAt).toBeUndefined();
+  });
+
+  it("rechaza si el pedido no tiene un paymentIssue pendiente de revisión", async () => {
+    const { order } = await createOrderFor(new Types.ObjectId(), { status: "cancelled" });
+
+    await expect(
+      orderService.reactivateOrder(order._id.toString(), new Types.ObjectId().toString()),
+    ).rejects.toThrow();
+  });
+});
+
+describe("refundOrderPayment", () => {
+  it("reembolsa el pago en Mercado Pago y marca la resolución", async () => {
+    mockRefundTotal.mockResolvedValue({ id: 1, status: "approved" });
+    const { order } = await createOrderFor(new Types.ObjectId(), {
+      status: "cancelled",
+      paymentIssue: { reason: "approved_on_cancelled", paymentId: "pay-late-3", flaggedAt: new Date() },
+    });
+
+    const updated = await orderService.refundOrderPayment(order._id.toString(), new Types.ObjectId().toString());
+
+    expect(mockRefundTotal).toHaveBeenCalledWith({ payment_id: "pay-late-3" });
+    expect(updated.paymentStatus).toBe("refunded");
+    expect(updated.paymentIssue?.resolution).toBe("refunded");
+    expect(updated.paymentIssue?.resolvedAt).toBeDefined();
+  });
+
+  it("rechaza si el pedido no tiene un paymentIssue pendiente de revisión", async () => {
+    const { order } = await createOrderFor(new Types.ObjectId(), { status: "cancelled" });
+
+    await expect(
+      orderService.refundOrderPayment(order._id.toString(), new Types.ObjectId().toString()),
+    ).rejects.toThrow();
   });
 });

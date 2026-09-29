@@ -19,6 +19,7 @@ export type ListOrdersQuery = z.infer<typeof listOrdersQuerySchema>;
 export const adminListOrdersQuerySchema = listOrdersQuerySchema.extend({
   status: z.enum(ORDER_STATUSES).optional(),
   customer: objectIdSchema.optional(),
+  needsReview: z.coerce.boolean().optional(),
 });
 export type AdminListOrdersQuery = z.infer<typeof adminListOrdersQuerySchema>;
 

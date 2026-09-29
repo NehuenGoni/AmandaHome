@@ -1,11 +1,12 @@
 import type { Order, OrderStatus, PaginatedResult } from "@amanda/shared";
-import { apiGet, apiPatch } from "./apiClient.js";
+import { apiGet, apiPatch, apiPost } from "./apiClient.js";
 
 export interface AdminListOrdersParams {
   page?: number;
   limit?: number;
   status?: OrderStatus;
   customer?: string;
+  needsReview?: boolean;
 }
 
 export interface UpdateOrderStatusInput {
@@ -30,3 +31,7 @@ export const getAdminOrder = (id: string) => apiGet<{ order: Order }>(`/admin/or
 
 export const updateOrderStatus = (id: string, input: UpdateOrderStatusInput) =>
   apiPatch<{ order: Order }>(`/admin/orders/${id}/status`, input);
+
+export const reactivateOrder = (id: string) => apiPost<{ order: Order }>(`/admin/orders/${id}/reactivate`);
+
+export const refundOrder = (id: string) => apiPost<{ order: Order }>(`/admin/orders/${id}/refund`);

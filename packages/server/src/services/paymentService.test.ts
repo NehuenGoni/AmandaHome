@@ -3,14 +3,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mockPreferenceCreate = vi.fn();
 const mockPaymentGet = vi.fn();
+const mockRefundTotal = vi.fn();
 
 vi.mock("mercadopago", () => ({
   MercadoPagoConfig: vi.fn().mockImplementation(() => ({})),
   Preference: vi.fn().mockImplementation(() => ({ create: mockPreferenceCreate })),
   Payment: vi.fn().mockImplementation(() => ({ get: mockPaymentGet })),
+  PaymentRefund: vi.fn().mockImplementation(() => ({ total: mockRefundTotal })),
 }));
 
-const { createPaymentPreference, fetchPayment } = await import("./paymentService.js");
+const { createPaymentPreference, fetchPayment, refundPayment } = await import("./paymentService.js");
 const { Order } = await import("../models/Order.js");
 
 afterEach(() => {
@@ -54,23 +56,36 @@ describe("createPaymentPreference", () => {
     mockPreferenceCreate.mockResolvedValue({ id: "pref-123", init_point: "https://mp.test/checkout" });
 
     const order = buildOrder();
-    const result = await createPaymentPreference(order);
+    const deadline = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const result = await createPaymentPreference(order, deadline);
 
     expect(result).toEqual({ preferenceId: "pref-123", initPoint: "https://mp.test/checkout" });
     const body = mockPreferenceCreate.mock.calls[0][0].body;
     expect(body.items).toHaveLength(2); // producto + envío
     expect(body.items[0].unit_price).toBe(2500); // centavos -> pesos
     expect(body.external_reference).toBe(order._id.toString());
+    expect(body.expires).toBe(true);
+    expect(body.expiration_date_to).toBe(deadline.toISOString());
   });
 
   it("no agrega el ítem de envío cuando el costo es 0", async () => {
     mockPreferenceCreate.mockResolvedValue({ id: "pref-123", init_point: "https://mp.test/checkout" });
 
     const order = buildOrder({ shippingCost: 0 });
-    await createPaymentPreference(order);
+    await createPaymentPreference(order, new Date(Date.now() + 24 * 60 * 60 * 1000));
 
     const body = mockPreferenceCreate.mock.calls[0][0].body;
     expect(body.items).toHaveLength(1);
+  });
+});
+
+describe("refundPayment", () => {
+  it("pide un reembolso total del pago", async () => {
+    mockRefundTotal.mockResolvedValue({ id: 1, status: "approved" });
+
+    await refundPayment("pay-999");
+
+    expect(mockRefundTotal).toHaveBeenCalledWith({ payment_id: "pay-999" });
   });
 });
 

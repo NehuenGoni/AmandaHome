@@ -6,6 +6,8 @@ export const listMyOrders = (page = 1, limit = 10) =>
 
 export const getMyOrder = (id: string) => apiGet<{ order: Order }>(`/orders/${id}`);
 
+export const payMyOrder = (id: string) => apiPost<{ checkoutUrl: string }>(`/orders/${id}/pay`);
+
 export const attachReceipt = (id: string, receiptUrl: string) =>
   apiPatch<{ order: Order }>(`/orders/${id}/receipt`, { receiptUrl });
 

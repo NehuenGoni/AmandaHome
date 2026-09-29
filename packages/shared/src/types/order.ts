@@ -24,6 +24,19 @@ export interface OrderStatusHistoryEntry {
 }
 
 /**
+ * Se levanta cuando llega un pago aprobado para un pedido que ya está
+ * cancelado (por vencimiento o por un admin). Un admin debe resolverlo a
+ * mano: reactivar el pedido (si hay stock) o devolver la plata.
+ */
+export interface OrderPaymentIssue {
+  reason: "approved_on_cancelled";
+  paymentId: string;
+  flaggedAt: string;
+  resolvedAt?: string;
+  resolution?: "reactivated" | "refunded";
+}
+
+/**
  * Snapshot inmutable de la variante al momento de compra: los datos del
  * producto pueden cambiar después sin afectar órdenes ya creadas.
  */
@@ -53,7 +66,13 @@ export interface Order extends WithTimestamps {
   statusHistory: OrderStatusHistoryEntry[];
   paymentMethod: string;
   paymentStatus: PaymentStatus;
+  /**
+   * Claves usadas: `preferenceId`, `initPoint` y `expiresAt` (link de pago
+   * vigente) y `paymentId`, `mpStatus`, `mpStatusDetail` (última
+   * notificación de Mercado Pago procesada).
+   */
   paymentDetails?: Record<string, unknown>;
+  paymentIssue?: OrderPaymentIssue;
   shippingMethod: string;
   shippingAddress: ShippingAddressSnapshot;
   trackingNumber?: string;

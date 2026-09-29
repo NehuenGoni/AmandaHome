@@ -21,3 +21,13 @@ adminOrderRouter.patch(
   validateRequest(updateOrderStatusSchema),
   orderController.updateOrderStatus,
 );
+adminOrderRouter.post(
+  "/:id/reactivate",
+  validateRequest(mongoIdParamSchema, "params"),
+  orderController.reactivateOrder,
+);
+adminOrderRouter.post(
+  "/:id/refund",
+  validateRequest(mongoIdParamSchema, "params"),
+  orderController.refundOrderPayment,
+);

@@ -3,6 +3,7 @@ import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { OrderSummaryCard } from "@/components/orders/OrderSummaryCard";
+import { PayNowButton } from "@/components/orders/PayNowButton";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { useMyOrder } from "@/hooks/useMyOrder";
@@ -44,7 +45,11 @@ export default function OrderConfirmation() {
   if (error || !liveOrder) return <NotFound />;
 
   const isConfirmed = liveOrder.status !== "pending" && liveOrder.status !== "cancelled";
-  const isCancelled = liveOrder.status === "cancelled" || failureOrPending === "failure";
+  const isCancelled = liveOrder.status === "cancelled";
+  // Mercado Pago redirige de vuelta con esto cuando la tarjeta se rechazó o el pago quedó pendiente:
+  // el pedido sigue "pending" (se puede reintentar), a diferencia de un pedido ya cancelado.
+  const paymentDidNotComplete =
+    isCancelled || (liveOrder.status === "pending" && (failureOrPending === "failure" || failureOrPending === "pending"));
 
   return (
     <div className="mx-auto flex max-w-xl flex-col items-center gap-6 py-6 text-center">
@@ -54,7 +59,7 @@ export default function OrderConfirmation() {
         transition={{ type: "spring", damping: 15, stiffness: 200 }}
         className="flex size-16 items-center justify-center rounded-full"
       >
-        {isCancelled ? (
+        {paymentDidNotComplete ? (
           <XCircle className="size-16 text-accent2" />
         ) : isConfirmed ? (
           <CheckCircle2 className="size-16 text-support" />
@@ -65,15 +70,22 @@ export default function OrderConfirmation() {
 
       <div>
         <h1 className="font-display text-2xl text-text">
-          {isCancelled ? "El pago no se completó" : isConfirmed ? "¡Gracias por tu compra!" : "Estamos confirmando tu pago"}
+          {paymentDidNotComplete ? "El pago no se completó" : isConfirmed ? "¡Gracias por tu compra!" : "Estamos confirmando tu pago"}
         </h1>
         <p className="mt-1 text-sm text-text-muted">
-          {isCancelled
-            ? "Podés intentar nuevamente desde tu carrito."
+          {paymentDidNotComplete
+            ? isCancelled
+              ? "El pedido se canceló. Si querés, podés hacer una compra nueva."
+              : "Podés intentar el pago de nuevo cuando quieras."
             : isConfirmed
               ? "Te enviamos un email con los detalles de tu pedido."
               : "Esto puede tardar unos segundos, no cierres esta página."}
         </p>
+        {paymentDidNotComplete && !isCancelled && (
+          <div className="mt-4 flex justify-center">
+            <PayNowButton orderId={liveOrder._id} />
+          </div>
+        )}
       </div>
 
       <div className="w-full text-left">

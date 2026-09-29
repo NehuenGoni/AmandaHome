@@ -1,14 +1,15 @@
 import { sumCents } from "@amanda/shared";
 import { Types } from "mongoose";
+import { isMercadoPagoConfigured } from "../config/env.js";
 import { getNextSequence } from "../models/Counter.js";
 import { Cart } from "../models/Cart.js";
 import { Order, type IOrderItem, type OrderDocument } from "../models/Order.js";
 import { Product } from "../models/Product.js";
 import { User } from "../models/User.js";
-import { BadRequestError, NotFoundError } from "../utils/AppError.js";
+import { BadRequestError, NotFoundError, ServiceUnavailableError } from "../utils/AppError.js";
 import type { CreateCheckoutInput } from "../validators/checkoutValidators.js";
 import { recordMovements, type StockChange } from "./inventoryService.js";
-import { createPaymentPreference } from "./paymentService.js";
+import { createPaymentPreference, getPaymentDeadline } from "./paymentService.js";
 
 const SHIPPING_COSTS: Record<string, number> = {
   pickup: 0,
@@ -29,7 +30,7 @@ export interface StockDecrement {
  * el log: la venta nunca llegó a concretarse). Los movimientos reales se
  * registran recién si la orden se crea con éxito.
  */
-async function decrementStock(items: StockDecrement[]): Promise<StockChange[]> {
+export async function decrementStock(items: StockDecrement[]): Promise<StockChange[]> {
   const applied: StockDecrement[] = [];
   const changes: StockChange[] = [];
   try {
@@ -73,6 +74,10 @@ export async function createOrderFromCart(
   userId: string,
   input: CreateCheckoutInput,
 ): Promise<{ order: OrderDocument; checkoutUrl: string }> {
+  if (!isMercadoPagoConfigured) {
+    throw new ServiceUnavailableError("Mercado Pago no está configurado");
+  }
+
   const user = await User.findById(userId);
   if (!user) throw new NotFoundError("Usuario no encontrado");
 
@@ -116,9 +121,9 @@ export async function createOrderFromCart(
   const shippingCost = SHIPPING_COSTS[input.shippingMethod] ?? 0;
   const total = sumCents(subtotal, shippingCost);
 
-  // La Order se crea en pending y el stock se descuenta ANTES de contactar
-  // al gateway: si Mercado Pago falla después, la orden queda pending y el
-  // stock ya reservado; el admin puede cancelarla manualmente si hace falta.
+  // El stock se descuenta ANTES de crear la orden para que la reserva sea
+  // atómica ítem por ítem; si algo falla en el medio, se revierte todo sin
+  // dejar constancia en el log (la venta nunca llegó a concretarse).
   const stockChanges = await decrementStock(stockDecrements);
 
   const orderNumber = await getNextSequence("orderNumber");
@@ -154,6 +159,33 @@ export async function createOrderFromCart(
     throw err;
   }
 
+  // Recién si Mercado Pago acepta crear la preferencia se considera la venta
+  // concretada: se vacía el carrito y se deja constancia del movimiento de
+  // stock. Si falla, se devuelve el stock y se cancela la orden sin tocar
+  // el carrito, para que el cliente pueda reintentar desde cero.
+  let preference: { preferenceId: string; initPoint: string };
+  const deadline = getPaymentDeadline(order);
+  try {
+    preference = await createPaymentPreference(order, deadline);
+  } catch (err) {
+    await restockItems(stockDecrements);
+    order.status = "cancelled";
+    order.statusHistory.push({
+      status: "cancelled",
+      changedAt: new Date(),
+      note: "No se pudo iniciar el pago con Mercado Pago",
+    });
+    await order.save();
+    throw err;
+  }
+
+  order.paymentDetails = {
+    preferenceId: preference.preferenceId,
+    initPoint: preference.initPoint,
+    expiresAt: deadline,
+  };
+  await order.save();
+
   await Cart.updateOne({ user: userId }, { $set: { items: [] } });
   await recordMovements(stockChanges, {
     type: "sale_out",
@@ -161,9 +193,5 @@ export async function createOrderFromCart(
     createdBy: userId,
   });
 
-  const { preferenceId, initPoint } = await createPaymentPreference(order);
-  order.paymentDetails = { preferenceId };
-  await order.save();
-
-  return { order, checkoutUrl: initPoint };
+  return { order, checkoutUrl: preference.initPoint };
 }

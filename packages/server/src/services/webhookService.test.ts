@@ -92,7 +92,7 @@ describe("handlePaymentWebhook", () => {
     expect(updated?.statusHistory).toHaveLength(2);
   });
 
-  it("cancela la orden y repone el stock cuando el pago es rechazado", async () => {
+  it("deja el pedido pending (sin devolver stock) cuando el pago es rechazado, para poder reintentar", async () => {
     const { order, product } = await createOrderWithProduct(3);
     mockPaymentGet.mockResolvedValue({
       id: "pay-2",
@@ -103,10 +103,56 @@ describe("handlePaymentWebhook", () => {
     await handlePaymentWebhook("pay-2");
 
     const updated = await Order.findById(order._id);
-    expect(updated?.status).toBe("cancelled");
+    expect(updated?.status).toBe("pending");
+    expect(updated?.paymentStatus).toBe("rejected");
 
     const updatedProduct = await Product.findById(product._id);
-    expect(updatedProduct?.variants[0]?.stock).toBe(5); // 3 + 2 repuestas
+    expect(updatedProduct?.variants[0]?.stock).toBe(3); // sin cambios: no se repone hasta que venza o lo cancele un admin
+  });
+
+  it("confirma el pedido si después de un rechazo llega un pago aprobado (reintento exitoso)", async () => {
+    const { order } = await createOrderWithProduct();
+    mockPaymentGet.mockResolvedValue({
+      id: "pay-2a",
+      status: "rejected",
+      external_reference: order._id.toString(),
+    });
+    await handlePaymentWebhook("pay-2a");
+
+    mockPaymentGet.mockResolvedValue({
+      id: "pay-2b",
+      status: "approved",
+      external_reference: order._id.toString(),
+    });
+    await handlePaymentWebhook("pay-2b");
+
+    const updated = await Order.findById(order._id);
+    expect(updated?.status).toBe("confirmed");
+    expect(updated?.paymentStatus).toBe("approved");
+  });
+
+  it("marca paymentIssue si llega un pago aprobado sobre un pedido ya cancelado, sin reactivarlo", async () => {
+    const { order, product } = await createOrderWithProduct(3);
+    order.status = "cancelled";
+    order.statusHistory.push({ status: "cancelled", changedAt: new Date(), note: "Vencido" });
+    await order.save();
+
+    mockPaymentGet.mockResolvedValue({
+      id: "pay-late",
+      status: "approved",
+      external_reference: order._id.toString(),
+    });
+
+    await handlePaymentWebhook("pay-late");
+
+    const updated = await Order.findById(order._id);
+    expect(updated?.status).toBe("cancelled"); // no se reactiva solo
+    expect(updated?.paymentIssue?.reason).toBe("approved_on_cancelled");
+    expect(updated?.paymentIssue?.paymentId).toBe("pay-late");
+    expect(updated?.paymentIssue?.resolvedAt).toBeUndefined();
+
+    const updatedProduct = await Product.findById(product._id);
+    expect(updatedProduct?.variants[0]?.stock).toBe(3); // sin cambios
   });
 
   it("es idempotente: no reprocesa si el paymentStatus ya coincide", async () => {

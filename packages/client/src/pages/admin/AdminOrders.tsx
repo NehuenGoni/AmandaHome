@@ -1,6 +1,6 @@
 import { formatMoney } from "@amanda/shared";
 import type { OrderStatus } from "@amanda/shared";
-import { ShoppingCart } from "lucide-react";
+import { AlertTriangle, ShoppingCart } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -24,9 +24,10 @@ const STATUS_OPTIONS: { value: OrderStatus | ""; label: string }[] = [
 export default function AdminOrders() {
   const [searchParams, setSearchParams] = useSearchParams();
   const status = (searchParams.get("status") as OrderStatus | null) ?? undefined;
+  const needsReview = searchParams.get("needsReview") === "true";
   const page = Number(searchParams.get("page") ?? "1");
 
-  const { data, isLoading } = useAdminOrders({ page, limit: PAGE_SIZE, status });
+  const { data, isLoading } = useAdminOrders({ page, limit: PAGE_SIZE, status, needsReview: needsReview || undefined });
 
   function updateParams(next: Record<string, string | undefined>) {
     const params = new URLSearchParams(searchParams);
@@ -42,17 +43,31 @@ export default function AdminOrders() {
     <div className="flex flex-col gap-6">
       <h1 className="font-display text-2xl text-text">Pedidos</h1>
 
-      <Select
-        className="max-w-xs"
-        value={status ?? ""}
-        onChange={(e) => updateParams({ status: e.target.value || undefined })}
-      >
-        {STATUS_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </Select>
+      <div className="flex flex-wrap items-center gap-3">
+        <Select
+          className="max-w-xs"
+          value={status ?? ""}
+          onChange={(e) => updateParams({ status: e.target.value || undefined })}
+        >
+          {STATUS_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+
+        <button
+          type="button"
+          onClick={() => updateParams({ needsReview: needsReview ? undefined : "true" })}
+          className={`flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
+            needsReview
+              ? "border-accent2/40 bg-accent2/10 text-accent2-deep"
+              : "border-border bg-surface text-text-muted hover:bg-surface-alt"
+          }`}
+        >
+          <AlertTriangle className="size-4" /> Requiere revisión
+        </button>
+      </div>
 
       {isLoading ? (
         <Spinner />

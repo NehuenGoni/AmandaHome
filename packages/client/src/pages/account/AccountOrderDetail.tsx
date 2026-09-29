@@ -2,6 +2,7 @@ import { Paperclip, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { OrderSummaryCard } from "@/components/orders/OrderSummaryCard";
+import { PayNowButton } from "@/components/orders/PayNowButton";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { InlineMessage } from "@/components/ui/InlineMessage";
@@ -44,6 +45,7 @@ export default function AccountOrderDetail() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="font-display text-2xl text-text">Pedido #{current.orderNumber}</h1>
+      {current.status === "pending" && <PayNowButton orderId={current._id} />}
       <OrderSummaryCard order={current} />
 
       <Card>

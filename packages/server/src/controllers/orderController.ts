@@ -21,6 +21,12 @@ export const getMyOrder = asyncHandler(async (req: Request, res: Response) => {
   res.json({ order });
 });
 
+export const payMyOrder = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as unknown as MongoIdParam;
+  const result = await orderService.payMyOrder(req.user!.id, id);
+  res.json(result);
+});
+
 export const attachReceipt = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params as unknown as MongoIdParam;
   const input = req.body as AttachReceiptInput;
@@ -44,5 +50,17 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
   const { id } = req.params as unknown as MongoIdParam;
   const input = req.body as UpdateOrderStatusInput;
   const order = await orderService.updateOrderStatus(id, input, req.user!.id);
+  res.json({ order });
+});
+
+export const reactivateOrder = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as unknown as MongoIdParam;
+  const order = await orderService.reactivateOrder(id, req.user!.id);
+  res.json({ order });
+});
+
+export const refundOrderPayment = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as unknown as MongoIdParam;
+  const order = await orderService.refundOrderPayment(id, req.user!.id);
   res.json({ order });
 });

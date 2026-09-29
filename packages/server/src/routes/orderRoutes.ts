@@ -11,6 +11,11 @@ orderRouter.use(authenticate);
 
 orderRouter.get("/", validateRequest(listOrdersQuerySchema, "query"), orderController.listMyOrders);
 orderRouter.get("/:id", validateRequest(mongoIdParamSchema, "params"), orderController.getMyOrder);
+orderRouter.post(
+  "/:id/pay",
+  validateRequest(mongoIdParamSchema, "params"),
+  orderController.payMyOrder,
+);
 orderRouter.patch(
   "/:id/receipt",
   validateRequest(mongoIdParamSchema, "params"),

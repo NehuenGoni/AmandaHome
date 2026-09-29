@@ -1,6 +1,6 @@
 import type { PaymentStatus } from "@amanda/shared";
 import { centsToPesos } from "@amanda/shared";
-import { MercadoPagoConfig, Payment, Preference } from "mercadopago";
+import { MercadoPagoConfig, Payment, PaymentRefund, Preference } from "mercadopago";
 import { env, isMercadoPagoConfigured } from "../config/env.js";
 import type { OrderDocument } from "../models/Order.js";
 import { ServiceUnavailableError } from "../utils/AppError.js";
@@ -15,12 +15,23 @@ function getClient(): MercadoPagoConfig {
   return client;
 }
 
+/** Plazo único de pago por pedido: se usa tanto para la preferencia original como para cualquier reintento. */
+export const PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+export function getPaymentDeadline(order: OrderDocument): Date {
+  const createdAt = (order as { createdAt?: Date }).createdAt ?? new Date();
+  return new Date(createdAt.getTime() + PAYMENT_WINDOW_MS);
+}
+
 export interface PaymentPreference {
   preferenceId: string;
   initPoint: string;
 }
 
-export async function createPaymentPreference(order: OrderDocument): Promise<PaymentPreference> {
+export async function createPaymentPreference(
+  order: OrderDocument,
+  expiresAt: Date,
+): Promise<PaymentPreference> {
   const preference = new Preference(getClient());
 
   const items = order.items.map((item) => ({
@@ -56,6 +67,9 @@ export async function createPaymentPreference(order: OrderDocument): Promise<Pay
       },
       auto_return: "approved",
       notification_url: `${env.SERVER_URL}/api/checkout/webhook`,
+      expires: true,
+      expiration_date_from: new Date().toISOString(),
+      expiration_date_to: expiresAt.toISOString(),
     },
   });
 
@@ -88,6 +102,8 @@ export interface FetchedPayment {
   rawStatus: string | undefined;
   statusDetail: string | undefined;
   externalReference: string | undefined;
+  /** "ticket" para Rapipago/Pago Fácil, "credit_card"/"debit_card" para tarjetas, etc. */
+  paymentTypeId: string | undefined;
 }
 
 /** Nunca confía en el payload de la notificación: re-consulta el pago real contra la API de MP. */
@@ -101,5 +117,12 @@ export async function fetchPayment(paymentId: string): Promise<FetchedPayment> {
     rawStatus: result.status,
     statusDetail: result.status_detail,
     externalReference: result.external_reference,
+    paymentTypeId: result.payment_type_id,
   };
+}
+
+/** Reembolso total: se usa cuando un pago aprobado quedó asociado a un pedido ya cancelado. */
+export async function refundPayment(paymentId: string): Promise<void> {
+  const refund = new PaymentRefund(getClient());
+  await refund.total({ payment_id: paymentId });
 }

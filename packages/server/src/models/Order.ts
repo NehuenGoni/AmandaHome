@@ -31,6 +31,19 @@ export interface IOrderStatusHistoryEntry {
   note?: string;
 }
 
+/**
+ * Se levanta cuando llega un pago aprobado para un pedido que ya está
+ * cancelado (por vencimiento o por un admin). Un admin debe resolverlo a
+ * mano: reactivar el pedido (si hay stock) o devolver la plata.
+ */
+export interface IOrderPaymentIssue {
+  reason: "approved_on_cancelled";
+  paymentId: string;
+  flaggedAt: Date;
+  resolvedAt?: Date;
+  resolution?: "reactivated" | "refunded";
+}
+
 export interface IShippingAddressSnapshot {
   label?: string;
   street: string;
@@ -53,7 +66,13 @@ export interface IOrder {
   statusHistory: IOrderStatusHistoryEntry[];
   paymentMethod: string;
   paymentStatus: PaymentStatus;
+  /**
+   * Claves usadas: `preferenceId`, `initPoint` y `expiresAt` (link de pago
+   * vigente) y `paymentId`, `mpStatus`, `mpStatusDetail` (última
+   * notificación de Mercado Pago procesada).
+   */
   paymentDetails?: Record<string, unknown>;
+  paymentIssue?: IOrderPaymentIssue;
   shippingMethod: string;
   shippingAddress: IShippingAddressSnapshot;
   trackingNumber?: string;
@@ -102,6 +121,17 @@ const statusHistoryEntrySchema = new Schema<IOrderStatusHistoryEntry>(
   { _id: false },
 );
 
+const paymentIssueSchema = new Schema<IOrderPaymentIssue>(
+  {
+    reason: { type: String, enum: ["approved_on_cancelled"], required: true },
+    paymentId: { type: String, required: true },
+    flaggedAt: { type: Date, required: true, default: () => new Date() },
+    resolvedAt: { type: Date },
+    resolution: { type: String, enum: ["reactivated", "refunded"] },
+  },
+  { _id: false },
+);
+
 const orderSchema = new Schema<IOrder>(
   {
     orderNumber: { type: Number, required: true, unique: true },
@@ -119,6 +149,7 @@ const orderSchema = new Schema<IOrder>(
     paymentMethod: { type: String, required: true },
     paymentStatus: { type: String, enum: PAYMENT_STATUSES, default: "pending" },
     paymentDetails: { type: Schema.Types.Mixed },
+    paymentIssue: { type: paymentIssueSchema },
     shippingMethod: { type: String, required: true },
     shippingAddress: { type: shippingAddressSnapshotSchema, required: true },
     trackingNumber: { type: String },
@@ -129,5 +160,6 @@ const orderSchema = new Schema<IOrder>(
 );
 
 orderSchema.index({ customer: 1, createdAt: -1 });
+orderSchema.index({ status: 1, createdAt: 1 });
 
 export const Order = (mongoose.models.Order as Model<IOrder>) ?? model<IOrder>("Order", orderSchema);
