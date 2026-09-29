@@ -3,5 +3,5 @@ interface LogoProps {
 }
 
 export function Logo({ className }: LogoProps) {
-  return <img src="/logo.png" alt="Amanda Home & Deco" className={className} />;
+  return <img src="/logo.png" alt="Amanda Home & Deco" className={`brand-logo ${className ?? ""}`} />;
 }

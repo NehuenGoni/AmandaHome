@@ -21,3 +21,52 @@ h1, h2, h3, h4, .font-display {
 * {
   scrollbar-color: var(--border) transparent;
 }
+
+/*
+ * Fondo con el patrón de objetos (public/patron-fondo.jpg), fijo detrás de todo el contenido.
+ * La imagen está pensada para el tema claro: se funde con --bg con multiply.
+ * En oscuro se invierte (el crema pasa a casi negro y las líneas quedan claras, con hue-rotate
+ * para conservar sus tonos) y se suma con screen, así el fondo sigue siendo --bg.
+ */
+.bg-pattern {
+  position: relative;
+  isolation: isolate;
+}
+
+.bg-pattern::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("/patron-fondo.jpg");
+  background-repeat: repeat;
+  background-size: 1100px auto;
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .bg-pattern::before {
+    filter: invert(1) hue-rotate(180deg) saturate(0.8);
+    mix-blend-mode: screen;
+    opacity: 0.22;
+  }
+}
+
+:root.dark .bg-pattern::before {
+  filter: invert(1) hue-rotate(180deg) saturate(0.8);
+  mix-blend-mode: screen;
+  opacity: 0.22;
+}
+
+/* El logo es negro sobre transparente: en oscuro se pasa a blanco para que no se pierda. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .brand-logo {
+    filter: brightness(0) invert(1);
+  }
+}
+
+:root.dark .brand-logo {
+  filter: brightness(0) invert(1);
+}

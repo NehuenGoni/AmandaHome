@@ -5,7 +5,7 @@ import { PageTransition } from "./PageTransition";
 
 export function PublicLayout() {
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
+    <div className="bg-pattern flex min-h-screen flex-col bg-bg">
       <Header />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
         <PageTransition>
