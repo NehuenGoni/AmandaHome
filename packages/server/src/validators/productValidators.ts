@@ -16,7 +16,10 @@ const variantSchema = z.object({
   costPrice: z.number().int("El costo debe estar en centavos").nonnegative(),
   stock: z.number().int().nonnegative().default(0),
   lowStockThreshold: z.number().int().nonnegative().default(0),
-  weight: z.number().nonnegative().optional(),
+  weight: z.number().positive().max(25000, "El peso máximo aceptado por el correo es 25kg").optional(),
+  height: z.number().positive().max(150, "La medida máxima aceptada por el correo es 150cm").optional(),
+  width: z.number().positive().max(150, "La medida máxima aceptada por el correo es 150cm").optional(),
+  length: z.number().positive().max(150, "La medida máxima aceptada por el correo es 150cm").optional(),
   barcode: z.string().optional(),
 });
 

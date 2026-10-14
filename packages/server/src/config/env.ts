@@ -30,6 +30,14 @@ const envSchema = z.object({
 
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("Amanda Home & Deco <no-reply@amandahomedeco.com.ar>"),
+
+  // Cotización y carga de envíos vía API MiCorreo (Correo Argentino). Sin
+  // estas variables se usa un proveedor simulado en dev/test y el precio de
+  // respaldo configurado en el admin en producción.
+  MICORREO_ENV: z.enum(["test", "prod"]).default("test"),
+  MICORREO_USER: z.string().optional(),
+  MICORREO_PASSWORD: z.string().optional(),
+  MICORREO_CUSTOMER_ID: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -63,3 +71,6 @@ export const isCloudinaryConfigured = Boolean(
 );
 export const isMercadoPagoConfigured = Boolean(env.MERCADOPAGO_ACCESS_TOKEN);
 export const isResendConfigured = Boolean(env.RESEND_API_KEY);
+export const isCorreoArgentinoConfigured = Boolean(
+  env.MICORREO_USER && env.MICORREO_PASSWORD && env.MICORREO_CUSTOMER_ID,
+);

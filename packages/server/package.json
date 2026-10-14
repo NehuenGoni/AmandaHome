@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src --ext .ts",
-    "seed:admin": "tsx src/scripts/seedAdmin.ts"
+    "seed:admin": "tsx src/scripts/seedAdmin.ts",
+    "shipping:customer-id": "tsx src/scripts/getMicorreoCustomerId.ts"
   },
   "dependencies": {
     "@amanda/shared": "*",

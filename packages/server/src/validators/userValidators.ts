@@ -1,3 +1,4 @@
+import { findProvince } from "@amanda/shared";
 import { z } from "zod";
 
 export const updateProfileSchema = z.object({
@@ -12,8 +13,14 @@ export const addressSchema = z.object({
   street: z.string().min(1, "La calle es requerida"),
   number: z.string().optional(),
   city: z.string().min(1, "La ciudad es requerida"),
-  province: z.string().min(1, "La provincia es requerida"),
-  postalCode: z.string().min(1, "El código postal es requerido"),
+  province: z
+    .string()
+    .min(1, "La provincia es requerida")
+    .refine((value) => Boolean(findProvince(value)), "Provincia inválida"),
+  postalCode: z
+    .string()
+    .min(1, "El código postal es requerido")
+    .regex(/^[A-Za-z]?\d{4}[A-Za-z]{0,3}$/, "Código postal inválido"),
   country: z.string().min(1).default("Argentina"),
   phone: z.string().optional(),
   isDefault: z.boolean().optional(),

@@ -20,6 +20,7 @@ vi.mock("../config/env.js", async (importOriginal) => {
 });
 
 const { createOrderFromCart } = await import("./checkoutService.js");
+const { quoteShipping } = await import("./shippingService.js");
 const { Cart } = await import("../models/Cart.js");
 const { Category } = await import("../models/Category.js");
 const { Order } = await import("../models/Order.js");
@@ -33,6 +34,24 @@ afterEach(() => {
   return clearTestDB();
 });
 afterAll(closeTestDB);
+
+/**
+ * El checkout recotiza el envío (nunca confía en el precio que vio el
+ * cliente), así que hay que pasarle el mismo costo que va a calcular: se
+ * usa la misma `quoteShipping` (con el correo simulado, activo en test).
+ */
+async function getShippingCost(
+  method: "pickup" | "home",
+  quantities: number[],
+  postalCode = "C1000",
+): Promise<number> {
+  const options = await quoteShipping({
+    items: quantities.map((quantity) => ({ quantity })),
+    subtotal: 0,
+    destinationPostalCode: method === "home" ? postalCode : undefined,
+  });
+  return options.find((o) => o.method === method)!.cost;
+}
 
 async function createUserWithAddress() {
   const user = await User.create({
@@ -87,15 +106,18 @@ describe("createOrderFromCart", () => {
       items: [{ product: product._id, variantSku: sku, quantity: 2 }],
     });
 
+    const expectedShippingCost = await getShippingCost("home", [2]);
     const { order, checkoutUrl } = await createOrderFromCart(user._id.toString(), {
       addressId,
-      shippingMethod: "standard",
+      shippingMethod: "home",
+      expectedShippingCost,
     });
 
     expect(checkoutUrl).toBe("https://mp.test/checkout");
     expect(order.status).toBe("pending");
     expect(order.subtotal).toBe(500000);
-    expect(order.total).toBe(650000); // + 150000 de envío standard
+    expect(order.shippingCost).toBe(expectedShippingCost);
+    expect(order.total).toBe(500000 + expectedShippingCost);
     expect(order.paymentDetails?.initPoint).toBe("https://mp.test/checkout");
     expect(order.paymentDetails?.expiresAt).toBeInstanceOf(Date);
 
@@ -120,7 +142,11 @@ describe("createOrderFromCart", () => {
       items: [{ product: product._id, variantSku: sku, quantity: 1 }],
     });
 
-    const { order } = await createOrderFromCart(user._id.toString(), { addressId, shippingMethod: "pickup" });
+    const { order } = await createOrderFromCart(user._id.toString(), {
+      addressId,
+      shippingMethod: "pickup",
+      expectedShippingCost: 0,
+    });
     expect(order.shippingCost).toBe(0);
     expect(order.total).toBe(order.subtotal);
   });
@@ -130,7 +156,11 @@ describe("createOrderFromCart", () => {
     await Cart.create({ user: user._id, items: [] });
 
     await expect(
-      createOrderFromCart(user._id.toString(), { addressId, shippingMethod: "standard" }),
+      createOrderFromCart(user._id.toString(), {
+        addressId,
+        shippingMethod: "home",
+        expectedShippingCost: 0,
+      }),
     ).rejects.toThrow();
   });
 
@@ -145,7 +175,8 @@ describe("createOrderFromCart", () => {
     await expect(
       createOrderFromCart(user._id.toString(), {
         addressId: "64b000000000000000000000",
-        shippingMethod: "standard",
+        shippingMethod: "home",
+        expectedShippingCost: 0,
       }),
     ).rejects.toThrow();
   });
@@ -162,8 +193,9 @@ describe("createOrderFromCart", () => {
       ],
     });
 
+    const expectedShippingCost = await getShippingCost("home", [2, 5]);
     await expect(
-      createOrderFromCart(user._id.toString(), { addressId, shippingMethod: "standard" }),
+      createOrderFromCart(user._id.toString(), { addressId, shippingMethod: "home", expectedShippingCost }),
     ).rejects.toThrow();
 
     // El primer ítem había descontado stock antes de fallar el segundo: debe revertirse.
@@ -182,8 +214,9 @@ describe("createOrderFromCart", () => {
       items: [{ product: product._id, variantSku: sku, quantity: 2 }],
     });
 
+    const expectedShippingCost = await getShippingCost("home", [2]);
     await expect(
-      createOrderFromCart(user._id.toString(), { addressId, shippingMethod: "standard" }),
+      createOrderFromCart(user._id.toString(), { addressId, shippingMethod: "home", expectedShippingCost }),
     ).rejects.toThrow();
 
     const updatedProduct = await Product.findById(product._id);
@@ -209,8 +242,9 @@ describe("createOrderFromCart", () => {
         items: [{ product: product._id, variantSku: sku, quantity: 1 }],
       });
 
+      const expectedShippingCost = await getShippingCost("home", [1]);
       await expect(
-        createOrderFromCart(user._id.toString(), { addressId, shippingMethod: "standard" }),
+        createOrderFromCart(user._id.toString(), { addressId, shippingMethod: "home", expectedShippingCost }),
       ).rejects.toThrow();
 
       expect(await Order.countDocuments()).toBe(0);

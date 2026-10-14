@@ -2,8 +2,9 @@ import type { Order } from "@amanda/shared";
 import { apiPost } from "./apiClient.js";
 
 export interface CreateCheckoutInput {
-  addressId: string;
-  shippingMethod: "pickup" | "standard" | "express";
+  addressId?: string;
+  shippingMethod: "pickup" | "home";
+  expectedShippingCost: number;
   notes?: string;
 }
 

@@ -21,7 +21,12 @@ export interface IProductVariant {
   costPrice: number;
   stock: number;
   lowStockThreshold: number;
+  /** Gramos. Usado para cotizar el envío. */
   weight?: number;
+  /** Centímetros. Usados para cotizar el envío. */
+  height?: number;
+  width?: number;
+  length?: number;
   barcode?: string;
 }
 
@@ -59,6 +64,9 @@ const productVariantSchema = new Schema<IProductVariant>({
   stock: { type: Number, required: true, min: 0, default: 0 },
   lowStockThreshold: { type: Number, required: true, min: 0, default: 0 },
   weight: { type: Number, min: 0 },
+  height: { type: Number, min: 0 },
+  width: { type: Number, min: 0 },
+  length: { type: Number, min: 0 },
   barcode: { type: String, trim: true },
 });
 

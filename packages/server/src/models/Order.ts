@@ -55,6 +55,21 @@ export interface IShippingAddressSnapshot {
   phone?: string;
 }
 
+/** Detalle de la cotización de envío por correo (Correo Argentino), guardado al confirmar la orden. */
+export interface IOrderShippingDetails {
+  carrier: string;
+  service?: string;
+  etaMinDays?: number;
+  etaMaxDays?: number;
+  quotedAt: Date;
+  carrierImportedAt?: Date;
+  isFallback?: boolean;
+  packageWeight?: number;
+  packageHeight?: number;
+  packageWidth?: number;
+  packageLength?: number;
+}
+
 export interface IOrder {
   orderNumber: number;
   customer: Types.ObjectId;
@@ -74,7 +89,9 @@ export interface IOrder {
   paymentDetails?: Record<string, unknown>;
   paymentIssue?: IOrderPaymentIssue;
   shippingMethod: string;
-  shippingAddress: IShippingAddressSnapshot;
+  /** Ausente cuando `shippingMethod` es "pickup": el retiro en el local no exige dirección. */
+  shippingAddress?: IShippingAddressSnapshot;
+  shippingDetails?: IOrderShippingDetails;
   trackingNumber?: string;
   notes?: string;
   receiptUrl?: string;
@@ -107,6 +124,23 @@ const shippingAddressSnapshotSchema = new Schema<IShippingAddressSnapshot>(
     postalCode: { type: String, required: true },
     country: { type: String, required: true },
     phone: { type: String },
+  },
+  { _id: false },
+);
+
+const shippingDetailsSchema = new Schema<IOrderShippingDetails>(
+  {
+    carrier: { type: String, required: true },
+    service: { type: String },
+    etaMinDays: { type: Number },
+    etaMaxDays: { type: Number },
+    quotedAt: { type: Date, required: true, default: () => new Date() },
+    carrierImportedAt: { type: Date },
+    isFallback: { type: Boolean },
+    packageWeight: { type: Number },
+    packageHeight: { type: Number },
+    packageWidth: { type: Number },
+    packageLength: { type: Number },
   },
   { _id: false },
 );
@@ -151,7 +185,8 @@ const orderSchema = new Schema<IOrder>(
     paymentDetails: { type: Schema.Types.Mixed },
     paymentIssue: { type: paymentIssueSchema },
     shippingMethod: { type: String, required: true },
-    shippingAddress: { type: shippingAddressSnapshotSchema, required: true },
+    shippingAddress: { type: shippingAddressSnapshotSchema },
+    shippingDetails: { type: shippingDetailsSchema },
     trackingNumber: { type: String },
     notes: { type: String },
     receiptUrl: { type: String },

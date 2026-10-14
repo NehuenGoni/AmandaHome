@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { useAdminOrder } from "@/hooks/admin/useAdminOrder";
 import { ApiError } from "@/lib/apiClient";
 import {
+  importOrderToCarrier,
   reactivateOrder,
   refundOrder,
   updateOrderStatus,
@@ -21,6 +22,8 @@ export default function AdminOrderDetail() {
   const { order, isLoading, error, setOrder } = useAdminOrder(id);
   const [resolutionError, setResolutionError] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(false);
+  const [carrierError, setCarrierError] = useState<string | null>(null);
+  const [isImportingCarrier, setIsImportingCarrier] = useState(false);
 
   async function handleStatusUpdate(input: UpdateOrderStatusInput) {
     if (!id) return;
@@ -58,10 +61,26 @@ export default function AdminOrderDetail() {
     }
   }
 
+  async function handleCarrierImport() {
+    if (!id) return;
+    setIsImportingCarrier(true);
+    setCarrierError(null);
+    try {
+      const result = await importOrderToCarrier(id);
+      setOrder(result.order);
+    } catch (err) {
+      setCarrierError(err instanceof ApiError ? err.message : "No pudimos cargar el envío en el correo");
+    } finally {
+      setIsImportingCarrier(false);
+    }
+  }
+
   if (isLoading) return <Spinner label="Buscando el pedido…" />;
   if (error || !order) return <p className="text-sm text-text-muted">Pedido no encontrado.</p>;
 
   const needsReview = order.paymentIssue && !order.paymentIssue.resolvedAt;
+  const canImportToCarrier =
+    order.shippingMethod === "home" && order.paymentStatus === "approved" && !order.shippingDetails?.carrierImportedAt;
 
   return (
     <div className="flex flex-col gap-6">
@@ -103,6 +122,34 @@ export default function AdminOrderDetail() {
             <p className="mb-4 font-display text-lg text-text">Actualizar estado</p>
             <OrderStatusForm order={order} onSubmit={handleStatusUpdate} />
           </Card>
+
+          {(canImportToCarrier || order.shippingDetails?.carrierImportedAt) && (
+            <Card>
+              <p className="font-display text-lg text-text">Envío por correo</p>
+              {order.shippingDetails?.carrierImportedAt ? (
+                <p className="mt-2 text-sm text-text-muted">
+                  Cargado en Correo Argentino el{" "}
+                  {new Date(order.shippingDetails.carrierImportedAt).toLocaleString("es-AR")}. Imprimí la
+                  etiqueta desde la web de MiCorreo.
+                </p>
+              ) : (
+                <>
+                  <p className="mt-2 text-sm text-text-muted">
+                    Carga este envío en Correo Argentino para generar la etiqueta. El número de seguimiento
+                    se sigue cargando a mano al pasar el pedido a "Enviado".
+                  </p>
+                  <Button className="mt-3" size="sm" isLoading={isImportingCarrier} onClick={handleCarrierImport}>
+                    Cargar en MiCorreo
+                  </Button>
+                  {carrierError && (
+                    <div className="mt-3">
+                      <InlineMessage tone="error">{carrierError}</InlineMessage>
+                    </div>
+                  )}
+                </>
+              )}
+            </Card>
+          )}
 
           {order.receiptUrl && (
             <Card>

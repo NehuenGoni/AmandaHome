@@ -54,6 +54,24 @@ export interface OrderItem {
 
 export type ShippingAddressSnapshot = Omit<Address, "_id" | "isDefault">;
 
+/** Detalle de la cotización de envío por correo (Correo Argentino), guardado al confirmar la orden. */
+export interface OrderShippingDetails {
+  carrier: string;
+  service?: string;
+  etaMinDays?: number;
+  etaMaxDays?: number;
+  quotedAt: string;
+  /** Cuándo se cargó el envío en MiCorreo para generar la etiqueta (lo hace un admin). */
+  carrierImportedAt?: string;
+  /** Si el costo se calculó con el precio de respaldo porque el correo no pudo cotizar. */
+  isFallback?: boolean;
+  /** Paquete usado para cotizar (gramos/cm), reutilizado al despachar sin tener que recalcularlo. */
+  packageWeight?: number;
+  packageHeight?: number;
+  packageWidth?: number;
+  packageLength?: number;
+}
+
 export interface Order extends WithTimestamps {
   _id: string;
   orderNumber: number;
@@ -74,7 +92,9 @@ export interface Order extends WithTimestamps {
   paymentDetails?: Record<string, unknown>;
   paymentIssue?: OrderPaymentIssue;
   shippingMethod: string;
-  shippingAddress: ShippingAddressSnapshot;
+  /** Ausente cuando `shippingMethod` es "pickup": el retiro en el local no exige dirección. */
+  shippingAddress?: ShippingAddressSnapshot;
+  shippingDetails?: OrderShippingDetails;
   trackingNumber?: string;
   notes?: string;
   receiptUrl?: string;

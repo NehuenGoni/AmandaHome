@@ -31,3 +31,8 @@ adminOrderRouter.post(
   validateRequest(mongoIdParamSchema, "params"),
   orderController.refundOrderPayment,
 );
+adminOrderRouter.post(
+  "/:id/carrier-import",
+  validateRequest(mongoIdParamSchema, "params"),
+  orderController.importOrderToCarrier,
+);

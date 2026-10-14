@@ -1,7 +1,9 @@
+import { PROVINCES } from "@amanda/shared";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InlineMessage } from "@/components/ui/InlineMessage";
+import { Select } from "@/components/ui/Select";
 import { ApiError } from "@/lib/apiClient";
 import type { AddressInput } from "@/lib/usersApi";
 
@@ -62,19 +64,29 @@ export function AddressForm({ initialValue, onSubmit, onCancel, submitLabel = "G
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Input label="Ciudad" required value={values.city} onChange={(e) => set("city", e.target.value)} />
-        <Input
+        <Select
           label="Provincia"
           required
           value={values.province}
           onChange={(e) => set("province", e.target.value)}
-        />
+        >
+          <option value="" disabled>
+            Elegí una provincia
+          </option>
+          {PROVINCES.map((province) => (
+            <option key={province.code} value={province.name}>
+              {province.name}
+            </option>
+          ))}
+        </Select>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Input
           label="Código postal"
+          placeholder="Ej: 1425 o C1425ABC"
           required
           value={values.postalCode}
-          onChange={(e) => set("postalCode", e.target.value)}
+          onChange={(e) => set("postalCode", e.target.value.toUpperCase())}
         />
         <Input label="Teléfono (opcional)" value={values.phone} onChange={(e) => set("phone", e.target.value)} />
       </div>

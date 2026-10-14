@@ -18,6 +18,8 @@ import { checkoutWebhookRouter } from "./routes/checkoutWebhookRoutes.js";
 import { inventoryRouter } from "./routes/inventoryRoutes.js";
 import { orderRouter } from "./routes/orderRoutes.js";
 import { productRouter } from "./routes/productRoutes.js";
+import { adminShippingRouter } from "./routes/adminShippingRoutes.js";
+import { shippingRouter } from "./routes/shippingRoutes.js";
 import { supplierPurchaseRouter } from "./routes/supplierPurchaseRoutes.js";
 import { uploadRouter } from "./routes/uploadRoutes.js";
 import { userRouter } from "./routes/userRoutes.js";
@@ -57,6 +59,8 @@ export function createApp() {
   app.use("/api/checkout", checkoutRouter);
   app.use("/api/admin/orders", adminOrderRouter);
   app.use("/api/orders", orderRouter);
+  app.use("/api/admin/shipping", adminShippingRouter);
+  app.use("/api/shipping", shippingRouter);
   app.use("/api/inventory", inventoryRouter);
   app.use("/api/supplier-purchases", supplierPurchaseRouter);
   app.use("/api/users", userRouter);

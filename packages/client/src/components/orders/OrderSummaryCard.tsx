@@ -1,5 +1,5 @@
 import type { Order } from "@amanda/shared";
-import { formatMoney } from "@amanda/shared";
+import { formatMoney, shippingMethodLabel } from "@amanda/shared";
 import { Card } from "@/components/ui/Card";
 import { OrderStatusBadge } from "./OrderStatusBadge";
 
@@ -51,11 +51,20 @@ export function OrderSummaryCard({ order }: { order: Order }) {
       </div>
 
       <div className="border-t border-border pt-4 text-sm">
-        <p className="font-medium text-text">Dirección de envío</p>
-        <p className="text-text-muted">
-          {order.shippingAddress.street} {order.shippingAddress.number}, {order.shippingAddress.city},{" "}
-          {order.shippingAddress.province} ({order.shippingAddress.postalCode})
-        </p>
+        <p className="font-medium text-text">{shippingMethodLabel(order.shippingMethod)}</p>
+        {order.shippingAddress ? (
+          <p className="text-text-muted">
+            {order.shippingAddress.street} {order.shippingAddress.number}, {order.shippingAddress.city},{" "}
+            {order.shippingAddress.province} ({order.shippingAddress.postalCode})
+          </p>
+        ) : (
+          <p className="text-text-muted">Retirás el pedido en el local.</p>
+        )}
+        {order.shippingDetails?.etaMinDays && order.shippingDetails.etaMaxDays && (
+          <p className="mt-1 text-text-muted">
+            Llega en {order.shippingDetails.etaMinDays}–{order.shippingDetails.etaMaxDays} días hábiles
+          </p>
+        )}
         {order.trackingNumber && (
           <p className="mt-2 text-text-muted">
             Seguimiento: <span className="font-medium text-text">{order.trackingNumber}</span>

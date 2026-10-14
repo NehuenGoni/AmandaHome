@@ -1,4 +1,5 @@
 import type { OrderStatus, PaginatedResult } from "@amanda/shared";
+import { centsToPesos } from "@amanda/shared";
 import { Types, type FilterQuery } from "mongoose";
 import { decrementStock } from "./checkoutService.js";
 import { Order, type IOrder, type OrderDocument } from "../models/Order.js";
@@ -7,6 +8,8 @@ import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/AppErro
 import { sendOrderConfirmationEmail, sendOrderStatusChangeEmail } from "./email/emailService.js";
 import { recordMovements, returnStock } from "./inventoryService.js";
 import { createPaymentPreference, getPaymentDeadline, refundPayment } from "./paymentService.js";
+import { shippingCarrier } from "./shipping/index.js";
+import { getPackageForItems } from "./shippingService.js";
 import type {
   AdminListOrdersQuery,
   AttachReceiptInput,
@@ -133,6 +136,60 @@ export async function updateOrderStatus(
   if (customer) {
     sendOrderStatusChangeEmail(customer, { orderNumber: order.orderNumber }, input.status);
   }
+
+  return order;
+}
+
+/**
+ * Carga el envío en Correo Argentino (MiCorreo) para que el admin pueda
+ * imprimir la etiqueta desde su web. No genera número de seguimiento: eso
+ * se sigue cargando a mano al pasar el pedido a "Enviado", como hoy.
+ */
+export async function importOrderToCarrier(orderId: string): Promise<OrderDocument> {
+  const order = await getAdminOrderById(orderId);
+
+  if (order.shippingMethod !== "home") {
+    throw new BadRequestError("Este pedido no tiene envío a domicilio");
+  }
+  if (order.paymentStatus !== "approved") {
+    throw new BadRequestError("El pedido todavía no tiene el pago aprobado");
+  }
+  if (order.shippingDetails?.carrierImportedAt) {
+    throw new BadRequestError("Este envío ya fue cargado en el correo");
+  }
+
+  const customer = await User.findById(order.customer);
+  if (!customer) throw new NotFoundError("Cliente del pedido no encontrado");
+
+  const details = order.shippingDetails;
+  const shippingPackage =
+    details?.packageWeight && details.packageHeight && details.packageWidth && details.packageLength
+      ? {
+          weight: details.packageWeight,
+          height: details.packageHeight,
+          width: details.packageWidth,
+          length: details.packageLength,
+        }
+      : // Pedidos viejos, creados antes de guardar el paquete usado: se recalcula con el paquete por defecto actual.
+        await getPackageForItems(
+          order.items.map((item) => ({ quantity: item.quantity })),
+        );
+
+  await shippingCarrier.importShipment({
+    order,
+    recipientName: `${customer.firstName} ${customer.lastName}`.trim(),
+    recipientEmail: customer.email,
+    declaredValue: centsToPesos(order.subtotal),
+    package: shippingPackage,
+  });
+
+  order.shippingDetails = {
+    ...order.shippingDetails,
+    carrier: order.shippingDetails?.carrier ?? "correo_argentino",
+    quotedAt: order.shippingDetails?.quotedAt ?? new Date(),
+    carrierImportedAt: new Date(),
+  };
+  await order.save();
 
   return order;
 }

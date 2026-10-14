@@ -35,3 +35,6 @@ export const updateOrderStatus = (id: string, input: UpdateOrderStatusInput) =>
 export const reactivateOrder = (id: string) => apiPost<{ order: Order }>(`/admin/orders/${id}/reactivate`);
 
 export const refundOrder = (id: string) => apiPost<{ order: Order }>(`/admin/orders/${id}/refund`);
+
+export const importOrderToCarrier = (id: string) =>
+  apiPost<{ order: Order }>(`/admin/orders/${id}/carrier-import`);

@@ -64,3 +64,9 @@ export const refundOrderPayment = asyncHandler(async (req: Request, res: Respons
   const order = await orderService.refundOrderPayment(id, req.user!.id);
   res.json({ order });
 });
+
+export const importOrderToCarrier = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as unknown as MongoIdParam;
+  const order = await orderService.importOrderToCarrier(id);
+  res.json({ order });
+});

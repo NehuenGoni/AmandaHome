@@ -111,14 +111,41 @@ export function ProductVariantsEditor({ variants, onChange }: ProductVariantsEdi
               />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-4">
               <Input
-                label="Peso en gramos (opcional)"
+                label="Peso en gramos"
                 type="number"
                 min={0}
                 value={variant.weight ?? ""}
                 onChange={(e) => update(index, { weight: e.target.value ? Number(e.target.value) : undefined })}
               />
+              <Input
+                label="Alto en cm"
+                type="number"
+                min={0}
+                value={variant.height ?? ""}
+                onChange={(e) => update(index, { height: e.target.value ? Number(e.target.value) : undefined })}
+              />
+              <Input
+                label="Ancho en cm"
+                type="number"
+                min={0}
+                value={variant.width ?? ""}
+                onChange={(e) => update(index, { width: e.target.value ? Number(e.target.value) : undefined })}
+              />
+              <Input
+                label="Largo en cm"
+                type="number"
+                min={0}
+                value={variant.length ?? ""}
+                onChange={(e) => update(index, { length: e.target.value ? Number(e.target.value) : undefined })}
+              />
+            </div>
+            <p className="-mt-2 text-xs text-text-muted">
+              Peso y medidas del paquete: se usan para cotizar el envío. Si no se cargan, se usa un paquete
+              genérico configurado en Envíos.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
               <Input
                 label="Código de barras (opcional)"
                 value={variant.barcode ?? ""}

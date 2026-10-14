@@ -4,5 +4,6 @@ export * from "./category.js";
 export * from "./product.js";
 export * from "./cart.js";
 export * from "./order.js";
+export * from "./shipping.js";
 export * from "./stockMovement.js";
 export * from "./supplierPurchase.js";

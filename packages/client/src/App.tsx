@@ -16,6 +16,7 @@ import AdminOrderDetail from "@/pages/admin/AdminOrderDetail";
 import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminProductForm from "@/pages/admin/AdminProductForm";
 import AdminProducts from "@/pages/admin/AdminProducts";
+import AdminShipping from "@/pages/admin/AdminShipping";
 import AdminSupplierPurchases from "@/pages/admin/AdminSupplierPurchases";
 import Cart from "@/pages/Cart";
 import Catalog from "@/pages/Catalog";
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="pedidos" element={<AdminOrders />} />
         <Route path="pedidos/:id" element={<AdminOrderDetail />} />
         <Route path="inventario" element={<AdminInventory />} />
+        <Route path="envios" element={<AdminShipping />} />
         <Route path="compras" element={<AdminSupplierPurchases />} />
         <Route path="administradores" element={<AdminAdmins />} />
       </Route>

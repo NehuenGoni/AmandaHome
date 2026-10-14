@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   Package,
+  PackageCheck,
   ShoppingCart,
   Tags,
   Truck,
@@ -16,6 +17,7 @@ const LINKS = [
   { to: "/admin/categorias", label: "Categorías", icon: Tags, end: false },
   { to: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart, end: false },
   { to: "/admin/inventario", label: "Inventario", icon: Warehouse, end: false },
+  { to: "/admin/envios", label: "Envíos", icon: PackageCheck, end: false },
   { to: "/admin/compras", label: "Compras a proveedores", icon: Truck, end: false },
   { to: "/admin/administradores", label: "Administradores", icon: UserCog, end: false },
 ];

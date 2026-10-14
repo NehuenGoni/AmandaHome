@@ -112,5 +112,8 @@ export const apiPost = <T>(path: string, body?: unknown, options?: ApiFetchOptio
 export const apiPatch = <T>(path: string, body?: unknown, options?: ApiFetchOptions) =>
   apiFetch<T>(path, { ...options, method: "PATCH", body });
 
+export const apiPut = <T>(path: string, body?: unknown, options?: ApiFetchOptions) =>
+  apiFetch<T>(path, { ...options, method: "PUT", body });
+
 export const apiDelete = <T>(path: string, options?: ApiFetchOptions) =>
   apiFetch<T>(path, { ...options, method: "DELETE" });

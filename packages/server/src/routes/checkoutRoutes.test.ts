@@ -11,6 +11,7 @@ vi.mock("mercadopago", () => ({
 }));
 
 const { createApp } = await import("../app.js");
+const { quoteShipping } = await import("../services/shippingService.js");
 const { Cart } = await import("../models/Cart.js");
 const { Category } = await import("../models/Category.js");
 const { Order } = await import("../models/Order.js");
@@ -69,22 +70,35 @@ async function setupCustomerWithCart() {
   return { token, addressId: user.addresses[0]!._id.toString() };
 }
 
+/** El checkout recotiza el envío, así que el request necesita el mismo costo que va a calcular. */
+async function getHomeShippingCost(): Promise<number> {
+  const options = await quoteShipping({
+    items: [{ quantity: 1 }],
+    subtotal: 0,
+    destinationPostalCode: "C1000",
+  });
+  return options.find((o) => o.method === "home")!.cost;
+}
+
 describe("POST /api/checkout", () => {
   it("rechaza sin autenticación", async () => {
-    const res = await request(app)
-      .post("/api/checkout")
-      .send({ addressId: "64b000000000000000000000", shippingMethod: "standard" });
+    const res = await request(app).post("/api/checkout").send({
+      addressId: "64b000000000000000000000",
+      shippingMethod: "home",
+      expectedShippingCost: 0,
+    });
     expect(res.status).toBe(401);
   });
 
   it("crea la orden y devuelve la URL de pago", async () => {
     mockPreferenceCreate.mockResolvedValue({ id: "pref-1", init_point: "https://mp.test/checkout" });
     const { token, addressId } = await setupCustomerWithCart();
+    const expectedShippingCost = await getHomeShippingCost();
 
     const res = await request(app)
       .post("/api/checkout")
       .set("Authorization", `Bearer ${token}`)
-      .send({ addressId, shippingMethod: "standard" });
+      .send({ addressId, shippingMethod: "home", expectedShippingCost });
 
     expect(res.status).toBe(201);
     expect(res.body.checkoutUrl).toBe("https://mp.test/checkout");
@@ -96,11 +110,12 @@ describe("POST /api/checkout/webhook", () => {
   it("responde 200 y procesa la notificación (pago aprobado)", async () => {
     mockPreferenceCreate.mockResolvedValue({ id: "pref-1", init_point: "https://mp.test/checkout" });
     const { token, addressId } = await setupCustomerWithCart();
+    const expectedShippingCost = await getHomeShippingCost();
 
     const checkoutRes = await request(app)
       .post("/api/checkout")
       .set("Authorization", `Bearer ${token}`)
-      .send({ addressId, shippingMethod: "standard" });
+      .send({ addressId, shippingMethod: "home", expectedShippingCost });
     const orderId = checkoutRes.body.order._id;
 
     mockPaymentGet.mockResolvedValue({ id: "pay-1", status: "approved", external_reference: orderId });

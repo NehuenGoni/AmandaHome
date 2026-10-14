@@ -12,7 +12,12 @@ export interface ProductVariant {
   costPrice: number;
   stock: number;
   lowStockThreshold: number;
+  /** Gramos. Usado para cotizar el envío. */
   weight?: number;
+  /** Centímetros. Usados para cotizar el envío. */
+  height?: number;
+  width?: number;
+  length?: number;
   barcode?: string;
 }
 

@@ -1,5 +1,7 @@
+import { formatMoney } from "@amanda/shared";
 import { AnimatePresence, motion } from "framer-motion";
 import { ShoppingBag } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CartItemRow } from "@/components/cart/CartItemRow";
 import { Button } from "@/components/ui/Button";
@@ -7,11 +9,21 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PriceTag } from "@/components/ui/PriceTag";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
+import { getShippingSettings } from "@/lib/shippingApi";
 
 export default function Cart() {
   const { cart, updateQuantity, removeItem, isLoading } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number | undefined>();
+
+  useEffect(() => {
+    getShippingSettings()
+      .then(({ settings }) => setFreeShippingThreshold(settings.freeShippingThreshold))
+      .catch(() => {
+        // Sin el umbral no se muestra el banner; el resto del carrito sigue funcionando.
+      });
+  }, []);
 
   if (!isLoading && cart.items.length === 0) {
     return (
@@ -63,7 +75,13 @@ export default function Cart() {
           <span>Subtotal</span>
           <PriceTag cents={cart.subtotal} className="font-medium text-text" />
         </div>
-        <p className="mt-1 text-xs text-text-muted">El envío se calcula en el siguiente paso.</p>
+        {freeShippingThreshold !== undefined && cart.subtotal < freeShippingThreshold ? (
+          <p className="mt-1 text-xs text-text-muted">
+            Te faltan {formatMoney(freeShippingThreshold - cart.subtotal)} para tener envío gratis.
+          </p>
+        ) : (
+          <p className="mt-1 text-xs text-text-muted">El envío se calcula en el siguiente paso.</p>
+        )}
         <Button size="lg" className="mt-5 w-full" onClick={handleCheckout}>
           Ir a pagar
         </Button>
