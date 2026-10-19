@@ -29,7 +29,10 @@ const envSchema = z.object({
   MERCADOPAGO_ACCESS_TOKEN: z.string().optional(),
 
   RESEND_API_KEY: z.string().optional(),
-  EMAIL_FROM: z.string().default("Amanda Home & Deco <no-reply@amandahomedeco.com.ar>"),
+  EMAIL_FROM: z.string().default("Amanda Home & Deco <no-reply@homedecoamanda.com>"),
+  // Casilla real a la que llegan las respuestas de los clientes; un remitente
+  // no-reply sin Reply-To penaliza la entrega (cae más a spam).
+  EMAIL_REPLY_TO: z.string().email().default("homedecoamanda@gmail.com"),
 
   // Cotización y carga de envíos vía API MiCorreo (Correo Argentino). Sin
   // estas variables se usa un proveedor simulado en dev/test y el precio de

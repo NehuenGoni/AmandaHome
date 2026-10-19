@@ -1,5 +1,6 @@
 import type { OrderStatus } from "@amanda/shared";
 import { formatMoney } from "@amanda/shared";
+import { env } from "../../config/env.js";
 
 interface EmailTemplate {
   subject: string;
@@ -24,11 +25,19 @@ const BRAND = {
   onPrimary: "#C69A3B",
 };
 
+/**
+ * El logo se sirve desde el front público. Si el cliente de correo bloquea las
+ * imágenes, el alt mantiene el nombre de la marca visible.
+ */
+function logoHtml(): string {
+  return `<img src="${env.CLIENT_URL}/logo.png" alt="Amanda Home & Deco" width="180" style="display:block;width:180px;max-width:100%;height:auto;margin:0 auto 24px;border:0;font-size:20px;color:${BRAND.text};text-align:center;" />`;
+}
+
 function wrapper(title: string, bodyHtml: string): string {
   return `
     <div style="background:${BRAND.bg};padding:32px 16px;font-family:Georgia,serif;color:${BRAND.text};">
       <div style="max-width:480px;margin:0 auto;background:${BRAND.surface};border-radius:8px;padding:32px;">
-        <h1 style="margin:0 0 16px;font-size:20px;color:${BRAND.text};">Amanda Home & Deco</h1>
+        ${logoHtml()}
         <h2 style="margin:0 0 16px;font-size:16px;color:${BRAND.text};">${title}</h2>
         ${bodyHtml}
       </div>

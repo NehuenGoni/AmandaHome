@@ -19,6 +19,28 @@ interface SendEmailParams {
   html: string;
 }
 
+/**
+ * Versión en texto plano derivada del HTML: los filtros anti-spam valoran que
+ * el email incluya una alternativa de texto. Los links se conservan como
+ * "etiqueta (url)".
+ */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<img\s[^>]*alt="([^"]*)"[^>]*>/gi, "$1\n")
+    .replace(/<a\s[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "$2 ($1)")
+    .replace(/<\/(p|h1|h2|tr|div)>/gi, "\n")
+    .replace(/<\/td>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 let resendClient: Resend | undefined;
 
 function getResendClient(): Resend {
@@ -41,8 +63,10 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
     await getResendClient().emails.send({
       from: env.EMAIL_FROM,
       to: params.to,
+      replyTo: env.EMAIL_REPLY_TO,
       subject: params.subject,
       html: params.html,
+      text: htmlToText(params.html),
     });
   } catch (err) {
     console.error("[email] error enviando email:", err);
