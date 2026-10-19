@@ -1,5 +1,5 @@
 import { formatMoney } from "@amanda/shared";
-import { AlertTriangle, Clock, Package, ShoppingCart } from "lucide-react";
+import { AlertTriangle, Clock, Package, ShoppingCart, Store } from "lucide-react";
 import { Link } from "react-router-dom";
 import { StatCard } from "@/components/admin/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -7,13 +7,16 @@ import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { Spinner } from "@/components/ui/Spinner";
 import { useAdminOrders } from "@/hooks/admin/useAdminOrders";
 import { useLowStock } from "@/hooks/admin/useLowStock";
+import { useStoreSalesSummary } from "@/hooks/admin/useStoreSalesSummary";
 
 export default function AdminDashboard() {
   const { data: pendingOrders, isLoading: loadingPending } = useAdminOrders({ status: "pending", limit: 1 });
   const { data: recentOrders, isLoading: loadingRecent } = useAdminOrders({ limit: 6 });
   const { items: lowStock, isLoading: loadingLowStock } = useLowStock();
 
-  const isLoading = loadingPending || loadingRecent || loadingLowStock;
+  const { summary: storeSummary, isLoading: loadingStoreSales } = useStoreSalesSummary();
+
+  const isLoading = loadingPending || loadingRecent || loadingLowStock || loadingStoreSales;
 
   return (
     <div className="flex flex-col gap-6">
@@ -23,7 +26,17 @@ export default function AdminDashboard() {
         <Spinner />
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              icon={Store}
+              label={
+                storeSummary && storeSummary.total > 0
+                  ? `Ventas en el local hoy · ${formatMoney(storeSummary.total)}`
+                  : "Ventas en el local hoy"
+              }
+              value={storeSummary?.count ?? 0}
+              to="/admin/ventas/historial"
+            />
             <StatCard
               icon={Clock}
               label="Pedidos pendientes de pago"

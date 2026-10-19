@@ -31,7 +31,12 @@ export async function decrementStock(items: StockDecrement[]): Promise<StockChan
   try {
     for (const item of items) {
       const before = await Product.findOneAndUpdate(
-        { _id: item.product, "variants.sku": item.variantSku, "variants.stock": { $gte: item.quantity } },
+        // $elemMatch: sku y stock deben cumplirse en la MISMA variante; con paths sueltos
+        // podría matchear una variante y decrementar (posicional $) otra distinta.
+        {
+          _id: item.product,
+          variants: { $elemMatch: { sku: item.variantSku, stock: { $gte: item.quantity } } },
+        },
         { $inc: { "variants.$.stock": -item.quantity } },
       );
       const variant = before?.variants.find((v) => v.sku === item.variantSku);

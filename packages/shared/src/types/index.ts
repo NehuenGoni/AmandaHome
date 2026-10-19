@@ -7,3 +7,5 @@ export * from "./order.js";
 export * from "./shipping.js";
 export * from "./stockMovement.js";
 export * from "./supplierPurchase.js";
+export * from "./storeSale.js";
+export * from "./cashSession.js";

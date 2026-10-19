@@ -96,6 +96,8 @@ const productSchema = new Schema<IProduct>(
 productSchema.index({ name: "text", description: "text", tags: "text", brand: "text" });
 productSchema.index({ category: 1, isActive: 1 });
 productSchema.index({ "variants.sku": 1 }, { unique: true });
+// Búsqueda exacta por código de barras en el punto de venta (sparse: la mayoría no lo tiene).
+productSchema.index({ "variants.barcode": 1 }, { sparse: true });
 
 productSchema.pre("validate", function generateSlug(next) {
   if (this.isModified("slug") && this.slug) {

@@ -19,7 +19,7 @@ vi.mock("../config/env.js", async (importOriginal) => {
   };
 });
 
-const { createOrderFromCart } = await import("./checkoutService.js");
+const { createOrderFromCart, decrementStock } = await import("./checkoutService.js");
 const { quoteShipping } = await import("./shippingService.js");
 const { Cart } = await import("../models/Cart.js");
 const { Category } = await import("../models/Category.js");
@@ -254,5 +254,33 @@ describe("createOrderFromCart", () => {
     } finally {
       envMockState.isMercadoPagoConfigured = true;
     }
+  });
+});
+
+describe("decrementStock", () => {
+  it("no toca otra variante cuando la pedida no tiene stock suficiente", async () => {
+    const unique = Math.random().toString(36).slice(2).toUpperCase();
+    const category = await Category.create({ name: `Cat-${unique}` });
+    const variant = (sku: string, attributeValue: string, stock: number) => ({
+      sku,
+      attributeName: "Color",
+      attributeValue,
+      price: 100000,
+      costPrice: 50000,
+      stock,
+      lowStockThreshold: 1,
+    });
+    const product = await Product.create({
+      name: `Multi ${unique}`,
+      category,
+      variants: [variant(`A-${unique}`, "Rojo", 0), variant(`B-${unique}`, "Azul", 10)],
+    });
+
+    await expect(
+      decrementStock([{ product: product._id, variantSku: `A-${unique}`, quantity: 2 }]),
+    ).rejects.toThrow(/Stock insuficiente/);
+
+    const after = await Product.findById(product._id);
+    expect(after!.variants.map((v) => v.stock)).toEqual([0, 10]);
   });
 });

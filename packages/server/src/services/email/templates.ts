@@ -117,3 +117,62 @@ export function orderStatusChangeTemplate(
     ),
   };
 }
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export interface StoreSaleReceiptData {
+  saleNumber: number;
+  createdAt: Date;
+  items: { productName: string; attributeValue: string; quantity: number; subtotal: number }[];
+  subtotal: number;
+  discountAmount: number;
+  total: number;
+  paymentMethodLabel: string;
+  customerName?: string;
+}
+
+/** Ticket de una compra en el local. Comprobante no fiscal: no reemplaza a una factura. */
+export function storeSaleReceiptTemplate(
+  sale: StoreSaleReceiptData,
+  store: { address?: string; hours?: string },
+): EmailTemplate {
+  const rows = sale.items
+    .map(
+      (item) =>
+        `<tr><td style="padding:4px 0;">${item.quantity} × ${escapeHtml(item.productName)} <span style="color:${BRAND.textMuted};">(${escapeHtml(item.attributeValue)})</span></td><td style="padding:4px 0;text-align:right;">${formatMoney(item.subtotal)}</td></tr>`,
+    )
+    .join("");
+  const discountRow =
+    sale.discountAmount > 0
+      ? `<tr><td style="padding:4px 0;color:${BRAND.textMuted};">Descuento</td><td style="padding:4px 0;text-align:right;">-${formatMoney(sale.discountAmount)}</td></tr>`
+      : "";
+  const date = sale.createdAt.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
+  const greeting = sale.customerName ? `Hola ${escapeHtml(sale.customerName)}, ` : "";
+  const storeInfo = [store.address, store.hours]
+    .filter((v): v is string => Boolean(v))
+    .map((v) => escapeHtml(v))
+    .join(" · ");
+
+  return {
+    subject: `Tu ticket de compra #${sale.saleNumber}`,
+    html: wrapper(
+      `${greeting}gracias por tu compra`,
+      `<p style="color:${BRAND.textMuted};margin:0 0 12px;">Ticket <strong>#${sale.saleNumber}</strong> · ${date}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">${rows}
+        <tr><td colspan="2" style="border-top:1px solid ${BRAND.bg};padding-top:4px;"></td></tr>
+        <tr><td style="padding:4px 0;color:${BRAND.textMuted};">Subtotal</td><td style="padding:4px 0;text-align:right;">${formatMoney(sale.subtotal)}</td></tr>
+        ${discountRow}
+        <tr><td style="padding:4px 0;"><strong>Total</strong></td><td style="padding:4px 0;text-align:right;"><strong>${formatMoney(sale.total)}</strong></td></tr>
+        <tr><td style="padding:4px 0;color:${BRAND.textMuted};">Pago</td><td style="padding:4px 0;text-align:right;">${escapeHtml(sale.paymentMethodLabel)}</td></tr>
+      </table>
+      ${storeInfo ? `<p style="color:${BRAND.textMuted};font-size:12px;margin-top:16px;">${storeInfo}</p>` : ""}
+      <p style="color:${BRAND.textMuted};font-size:12px;margin-top:8px;">Comprobante no válido como factura.</p>`,
+    ),
+  };
+}

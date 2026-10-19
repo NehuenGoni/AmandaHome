@@ -1,7 +1,10 @@
 import {
+  Landmark,
   LayoutDashboard,
   Package,
   PackageCheck,
+  Receipt,
+  ScanBarcode,
   ShoppingCart,
   Tags,
   Truck,
@@ -13,6 +16,9 @@ import { cn } from "@/lib/utils";
 
 const LINKS = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/admin/ventas", label: "Punto de venta", icon: ScanBarcode, end: true },
+  { to: "/admin/caja", label: "Caja", icon: Landmark, end: false },
+  { to: "/admin/ventas/historial", label: "Ventas del local", icon: Receipt, end: false },
   { to: "/admin/productos", label: "Productos", icon: Package, end: false },
   { to: "/admin/categorias", label: "Categorías", icon: Tags, end: false },
   { to: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart, end: false },

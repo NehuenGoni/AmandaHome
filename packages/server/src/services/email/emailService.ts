@@ -7,6 +7,8 @@ import {
   adminRevokedTemplate,
   orderConfirmationTemplate,
   orderStatusChangeTemplate,
+  storeSaleReceiptTemplate,
+  type StoreSaleReceiptData,
   passwordResetTemplate,
   welcomeTemplate,
 } from "./templates.js";
@@ -90,4 +92,13 @@ export function sendOrderStatusChangeEmail(
 ): void {
   const { subject, html } = orderStatusChangeTemplate(user.firstName, order, newStatus);
   void sendEmail({ to: user.email, subject, html });
+}
+
+export function sendStoreSaleReceiptEmail(
+  to: string,
+  sale: StoreSaleReceiptData,
+  store: { address?: string; hours?: string },
+): Promise<void> {
+  const { subject, html } = storeSaleReceiptTemplate(sale, store);
+  return sendEmail({ to, subject, html });
 }

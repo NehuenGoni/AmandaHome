@@ -9,15 +9,20 @@ import AccountOrderDetail from "@/pages/account/AccountOrderDetail";
 import AccountOrders from "@/pages/account/AccountOrders";
 import AccountProfile from "@/pages/account/AccountProfile";
 import AdminAdmins from "@/pages/admin/AdminAdmins";
+import AdminCashRegister from "@/pages/admin/AdminCashRegister";
 import AdminCategories from "@/pages/admin/AdminCategories";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminInventory from "@/pages/admin/AdminInventory";
 import AdminOrderDetail from "@/pages/admin/AdminOrderDetail";
 import AdminOrders from "@/pages/admin/AdminOrders";
+import AdminPos from "@/pages/admin/AdminPos";
 import AdminProductForm from "@/pages/admin/AdminProductForm";
 import AdminProducts from "@/pages/admin/AdminProducts";
 import AdminShipping from "@/pages/admin/AdminShipping";
+import AdminStoreSaleDetail from "@/pages/admin/AdminStoreSaleDetail";
+import AdminStoreSales from "@/pages/admin/AdminStoreSales";
 import AdminSupplierPurchases from "@/pages/admin/AdminSupplierPurchases";
+import StoreSaleTicket from "@/pages/admin/StoreSaleTicket";
 import Cart from "@/pages/Cart";
 import Catalog from "@/pages/Catalog";
 import Checkout from "@/pages/Checkout";
@@ -44,8 +49,22 @@ export default function App() {
         <Route path="inventario" element={<AdminInventory />} />
         <Route path="envios" element={<AdminShipping />} />
         <Route path="compras" element={<AdminSupplierPurchases />} />
+        <Route path="caja" element={<AdminCashRegister />} />
+        <Route path="ventas" element={<AdminPos />} />
+        <Route path="ventas/historial" element={<AdminStoreSales />} />
+        <Route path="ventas/:id" element={<AdminStoreSaleDetail />} />
         <Route path="administradores" element={<AdminAdmins />} />
       </Route>
+
+      {/* Fuera del AdminLayout a propósito: al imprimir debe salir solo el ticket. */}
+      <Route
+        path="admin/ventas/:id/ticket"
+        element={
+          <ProtectedRoute role="admin">
+            <StoreSaleTicket />
+          </ProtectedRoute>
+        }
+      />
 
       <Route element={<PublicLayout />}>
         <Route index element={<Home />} />

@@ -97,10 +97,13 @@ export async function adjustStock(input: AdjustStockInput, adminId: string): Pro
     throw new BadRequestError("El ajuste dejaría el stock en un valor negativo");
   }
 
-  const filter: FilterQuery<IProduct> = { _id: input.productId, "variants.sku": sku };
-  if (input.quantityChange < 0) {
-    filter["variants.stock"] = { $gte: -input.quantityChange };
-  }
+  const filter: FilterQuery<IProduct> = {
+    _id: input.productId,
+    variants: {
+      $elemMatch:
+        input.quantityChange < 0 ? { sku, stock: { $gte: -input.quantityChange } } : { sku },
+    },
+  };
 
   const updated = await Product.findOneAndUpdate(filter, {
     $inc: { "variants.$.stock": input.quantityChange },
