@@ -27,6 +27,9 @@ const envSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().optional(),
 
   MERCADOPAGO_ACCESS_TOKEN: z.string().optional(),
+  // Clave secreta que Mercado Pago entrega al configurar el webhook en el
+  // panel: permite validar que una notificación realmente venga de MP.
+  MERCADOPAGO_WEBHOOK_SECRET: z.string().optional(),
 
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("Amanda Home & Deco <no-reply@homedecoamanda.com>"),
@@ -73,6 +76,7 @@ export const isCloudinaryConfigured = Boolean(
   env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET,
 );
 export const isMercadoPagoConfigured = Boolean(env.MERCADOPAGO_ACCESS_TOKEN);
+export const isMercadoPagoWebhookSecretConfigured = Boolean(env.MERCADOPAGO_WEBHOOK_SECRET);
 export const isResendConfigured = Boolean(env.RESEND_API_KEY);
 export const isCorreoArgentinoConfigured = Boolean(
   env.MICORREO_USER && env.MICORREO_PASSWORD && env.MICORREO_CUSTOMER_ID,
