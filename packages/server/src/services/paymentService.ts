@@ -1,6 +1,6 @@
 import type { PaymentStatus } from "@amanda/shared";
 import { centsToPesos } from "@amanda/shared";
-import { MercadoPagoConfig, Payment, PaymentRefund, Preference } from "mercadopago";
+import { MercadoPagoConfig, MerchantOrder, Payment, PaymentRefund, Preference } from "mercadopago";
 import { env, isMercadoPagoConfigured } from "../config/env.js";
 import type { OrderDocument } from "../models/Order.js";
 import { ServiceUnavailableError } from "../utils/AppError.js";
@@ -125,4 +125,16 @@ export async function fetchPayment(paymentId: string): Promise<FetchedPayment> {
 export async function refundPayment(paymentId: string): Promise<void> {
   const refund = new PaymentRefund(getClient());
   await refund.total({ payment_id: paymentId });
+}
+
+/**
+ * La notification_url de la preferencia manda notificaciones de tipo
+ * "merchant_order" (canal IPN clásico), no "payment": para enterarnos del
+ * estado real del pago hay que consultar la orden y revisar sus pagos
+ * asociados.
+ */
+export async function fetchMerchantOrderPaymentIds(merchantOrderId: string): Promise<string[]> {
+  const merchantOrder = new MerchantOrder(getClient());
+  const result = await merchantOrder.get({ merchantOrderId });
+  return (result.payments ?? []).filter((p) => p.id !== undefined).map((p) => String(p.id));
 }

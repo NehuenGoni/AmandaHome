@@ -29,6 +29,7 @@ function buildSignature(dataId: string, requestId: string, ts: string): string {
 }
 
 function buildReq(opts: {
+  type?: string | null;
   dataId?: string;
   signature?: string;
   requestId?: string;
@@ -38,9 +39,12 @@ function buildReq(opts: {
   if (opts.signature) headers["x-signature"] = opts.signature;
   if (opts.requestId) headers["x-request-id"] = opts.requestId;
 
+  // "payment" por defecto: es el único tópico donde exigimos firma.
+  const type = opts.type === null ? undefined : (opts.type ?? "payment");
+
   return {
     header: (name: string) => headers[name.toLowerCase()],
-    body: opts.dataId ? { data: { id: opts.dataId } } : {},
+    body: { ...(type ? { type } : {}), ...(opts.dataId ? { data: { id: opts.dataId } } : {}) },
     query: opts.query ?? {},
   } as unknown as Request;
 }
@@ -65,7 +69,7 @@ describe("verifyMercadoPagoWebhook", () => {
     expect(res.sendStatus).not.toHaveBeenCalled();
   });
 
-  it("deja pasar una notificación con firma válida", () => {
+  it("deja pasar una notificación de pago con firma válida", () => {
     const dataId = "123456789";
     const requestId = "req-1";
     const ts = "1700000000";
@@ -79,7 +83,7 @@ describe("verifyMercadoPagoWebhook", () => {
     expect(res.sendStatus).not.toHaveBeenCalled();
   });
 
-  it("rechaza con 401 si la firma no coincide", () => {
+  it("rechaza con 401 si la firma de un pago no coincide", () => {
     const dataId = "123456789";
     const requestId = "req-1";
     const ts = "1700000000";
@@ -94,7 +98,7 @@ describe("verifyMercadoPagoWebhook", () => {
     expect(res.sendStatus).toHaveBeenCalledWith(401);
   });
 
-  it("rechaza con 401 si falta el header x-signature", () => {
+  it("rechaza con 401 si falta el header x-signature en un pago", () => {
     const req = buildReq({ dataId: "123", requestId: "req-1" });
     const res = buildRes();
     const next = vi.fn();
@@ -105,7 +109,7 @@ describe("verifyMercadoPagoWebhook", () => {
     expect(res.sendStatus).toHaveBeenCalledWith(401);
   });
 
-  it("rechaza con 401 si falta el header x-request-id", () => {
+  it("rechaza con 401 si falta el header x-request-id en un pago", () => {
     const req = buildReq({ dataId: "123", signature: "ts=1700000000,v1=abc" });
     const res = buildRes();
     const next = vi.fn();
@@ -116,7 +120,7 @@ describe("verifyMercadoPagoWebhook", () => {
     expect(res.sendStatus).toHaveBeenCalledWith(401);
   });
 
-  it("rechaza con 401 si no hay data.id en el body ni en la query", () => {
+  it("rechaza con 401 si no hay data.id en el body ni en la query de un pago", () => {
     const req = buildReq({ requestId: "req-1", signature: "ts=1700000000,v1=abc" });
     const res = buildRes();
     const next = vi.fn();
@@ -127,7 +131,7 @@ describe("verifyMercadoPagoWebhook", () => {
     expect(res.sendStatus).toHaveBeenCalledWith(401);
   });
 
-  it("acepta el data.id recibido por query string", () => {
+  it("acepta el data.id de un pago recibido por query string", () => {
     const dataId = "999";
     const requestId = "req-2";
     const ts = "1700000001";
@@ -136,6 +140,20 @@ describe("verifyMercadoPagoWebhook", () => {
       signature: buildSignature(dataId, requestId, ts),
       query: { "data.id": dataId },
     });
+    const res = buildRes();
+    const next = vi.fn();
+
+    verifyMercadoPagoWebhook(req, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.sendStatus).not.toHaveBeenCalled();
+  });
+
+  it("deja pasar una notificación de merchant_order sin exigir firma", () => {
+    // El canal IPN clásico (notification_url de la preferencia) manda
+    // merchant_order sin este esquema de firma; el handler igual nunca
+    // confía en el payload, así que no hace falta bloquearlo acá.
+    const req = buildReq({ type: "merchant_order", dataId: "45410884575" });
     const res = buildRes();
     const next = vi.fn();
 

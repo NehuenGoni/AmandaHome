@@ -4,15 +4,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const mockPreferenceCreate = vi.fn();
 const mockPaymentGet = vi.fn();
 const mockRefundTotal = vi.fn();
+const mockMerchantOrderGet = vi.fn();
 
 vi.mock("mercadopago", () => ({
   MercadoPagoConfig: vi.fn().mockImplementation(() => ({})),
   Preference: vi.fn().mockImplementation(() => ({ create: mockPreferenceCreate })),
   Payment: vi.fn().mockImplementation(() => ({ get: mockPaymentGet })),
   PaymentRefund: vi.fn().mockImplementation(() => ({ total: mockRefundTotal })),
+  MerchantOrder: vi.fn().mockImplementation(() => ({ get: mockMerchantOrderGet })),
 }));
 
-const { createPaymentPreference, fetchPayment, refundPayment } = await import("./paymentService.js");
+const { createPaymentPreference, fetchMerchantOrderPaymentIds, fetchPayment, refundPayment } = await import(
+  "./paymentService.js"
+);
 const { Order } = await import("../models/Order.js");
 
 afterEach(() => {
@@ -116,5 +120,22 @@ describe("fetchPayment", () => {
   it("mapea refunded/charged_back a refunded", async () => {
     mockPaymentGet.mockResolvedValue({ id: "pay-4", status: "charged_back" });
     expect((await fetchPayment("pay-4")).status).toBe("refunded");
+  });
+});
+
+describe("fetchMerchantOrderPaymentIds", () => {
+  it("devuelve los ids de los pagos asociados a la orden", async () => {
+    mockMerchantOrderGet.mockResolvedValue({
+      id: 999,
+      payments: [{ id: 185176777578 }, { id: 185176777579 }],
+    });
+
+    const ids = await fetchMerchantOrderPaymentIds("999");
+    expect(ids).toEqual(["185176777578", "185176777579"]);
+  });
+
+  it("devuelve un array vacío si todavía no hay pagos", async () => {
+    mockMerchantOrderGet.mockResolvedValue({ id: 999, payments: [] });
+    expect(await fetchMerchantOrderPaymentIds("999")).toEqual([]);
   });
 });

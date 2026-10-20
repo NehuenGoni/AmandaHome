@@ -1,7 +1,7 @@
 import { Order } from "../models/Order.js";
 import { User } from "../models/User.js";
 import { sendOrderConfirmationEmail } from "./email/emailService.js";
-import { fetchPayment } from "./paymentService.js";
+import { fetchMerchantOrderPaymentIds, fetchPayment } from "./paymentService.js";
 
 /**
  * Nunca lanza: el controller siempre responde 200 a Mercado Pago para no
@@ -62,5 +62,24 @@ export async function handlePaymentWebhook(paymentId: string | undefined): Promi
     await order.save();
   } catch (err) {
     console.error("[webhook] error procesando notificación de pago:", err);
+  }
+}
+
+/**
+ * La notification_url de la preferencia manda notificaciones de tipo
+ * "merchant_order" (no "payment"): hay que consultar la orden en la API de
+ * Mercado Pago para enterarnos de los pagos asociados y procesarlos.
+ * Nunca lanza, mismo criterio que handlePaymentWebhook.
+ */
+export async function handleMerchantOrderWebhook(merchantOrderId: string | undefined): Promise<void> {
+  if (!merchantOrderId) return;
+
+  try {
+    const paymentIds = await fetchMerchantOrderPaymentIds(merchantOrderId);
+    for (const paymentId of paymentIds) {
+      await handlePaymentWebhook(paymentId);
+    }
+  } catch (err) {
+    console.error("[webhook] error procesando notificación de merchant_order:", err);
   }
 }

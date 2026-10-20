@@ -2,14 +2,16 @@ import { Types } from "mongoose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 const mockPaymentGet = vi.fn();
+const mockMerchantOrderGet = vi.fn();
 
 vi.mock("mercadopago", () => ({
   MercadoPagoConfig: vi.fn().mockImplementation(() => ({})),
   Preference: vi.fn().mockImplementation(() => ({ create: vi.fn() })),
   Payment: vi.fn().mockImplementation(() => ({ get: mockPaymentGet })),
+  MerchantOrder: vi.fn().mockImplementation(() => ({ get: mockMerchantOrderGet })),
 }));
 
-const { handlePaymentWebhook } = await import("./webhookService.js");
+const { handleMerchantOrderWebhook, handlePaymentWebhook } = await import("./webhookService.js");
 const { Category } = await import("../models/Category.js");
 const { Order } = await import("../models/Order.js");
 const { Product } = await import("../models/Product.js");
@@ -187,5 +189,57 @@ describe("handlePaymentWebhook", () => {
   it("nunca lanza aunque la consulta a Mercado Pago falle", async () => {
     mockPaymentGet.mockRejectedValue(new Error("timeout"));
     await expect(handlePaymentWebhook("pay-5")).resolves.toBeUndefined();
+  });
+});
+
+describe("handleMerchantOrderWebhook", () => {
+  it("confirma el pedido a partir de los pagos asociados a la merchant_order", async () => {
+    const { order } = await createOrderWithProduct();
+    mockMerchantOrderGet.mockResolvedValue({
+      id: 999,
+      payments: [{ id: 185176777578, status: "approved" }],
+    });
+    mockPaymentGet.mockResolvedValue({
+      id: "185176777578",
+      status: "approved",
+      external_reference: order._id.toString(),
+    });
+
+    await handleMerchantOrderWebhook("999");
+
+    expect(mockPaymentGet).toHaveBeenCalledTimes(1);
+    const updated = await Order.findById(order._id);
+    expect(updated?.status).toBe("confirmed");
+    expect(updated?.paymentStatus).toBe("approved");
+  });
+
+  it("procesa cada pago asociado si la orden tiene más de uno", async () => {
+    mockMerchantOrderGet.mockResolvedValue({
+      id: 999,
+      payments: [{ id: 1 }, { id: 2 }],
+    });
+    mockPaymentGet.mockResolvedValue({ id: "1", status: "rejected", external_reference: undefined });
+
+    await handleMerchantOrderWebhook("999");
+
+    expect(mockPaymentGet).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignora notificaciones sin merchantOrderId", async () => {
+    await expect(handleMerchantOrderWebhook(undefined)).resolves.toBeUndefined();
+    expect(mockMerchantOrderGet).not.toHaveBeenCalled();
+  });
+
+  it("no hace nada si la orden todavía no tiene pagos asociados", async () => {
+    mockMerchantOrderGet.mockResolvedValue({ id: 999, payments: [] });
+
+    await handleMerchantOrderWebhook("999");
+
+    expect(mockPaymentGet).not.toHaveBeenCalled();
+  });
+
+  it("nunca lanza aunque la consulta a Mercado Pago falle", async () => {
+    mockMerchantOrderGet.mockRejectedValue(new Error("timeout"));
+    await expect(handleMerchantOrderWebhook("999")).resolves.toBeUndefined();
   });
 });
