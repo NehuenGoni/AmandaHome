@@ -1,3 +1,4 @@
+import { BUSINESS } from "@amanda/shared";
 import { motion } from "framer-motion";
 import { ArrowRight, Clock, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -122,7 +123,7 @@ export default function Home() {
               Cómo llegar <ArrowRight className="size-4" />
             </a>
             <a
-              href="https://wa.me/5491137582353"
+              href={BUSINESS.whatsappUrl}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-full border border-[#f5f0e4]/40 px-6 py-3 text-sm font-medium text-[#f5f0e4] backdrop-blur-sm transition-colors hover:bg-[#f5f0e4]/10"

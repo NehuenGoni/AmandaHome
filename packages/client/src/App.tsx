@@ -26,14 +26,19 @@ import StoreSaleTicket from "@/pages/admin/StoreSaleTicket";
 import Cart from "@/pages/Cart";
 import Catalog from "@/pages/Catalog";
 import Checkout from "@/pages/Checkout";
+import Arrepentimiento from "@/pages/Arrepentimiento";
+import CambiosYDevoluciones from "@/pages/CambiosYDevoluciones";
+import Contacto from "@/pages/Contacto";
 import ForgotPassword from "@/pages/ForgotPassword";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 import OrderConfirmation from "@/pages/OrderConfirmation";
+import Privacidad from "@/pages/Privacidad";
 import ProductDetail from "@/pages/ProductDetail";
 import Register from "@/pages/Register";
 import ResetPassword from "@/pages/ResetPassword";
+import Terminos from "@/pages/Terminos";
 
 export default function App() {
   return (
@@ -100,6 +105,17 @@ export default function App() {
           <Route path="pedidos/:id" element={<AccountOrderDetail />} />
           <Route path="direcciones" element={<AccountAddresses />} />
         </Route>
+
+        <Route path="terminos-y-condiciones" element={<Terminos />} />
+
+        <Route path="cambios-y-devoluciones" element={<CambiosYDevoluciones />} />
+
+        <Route path="politica-de-privacidad" element={<Privacidad />} />
+
+        <Route path="contacto" element={<Contacto />} />
+
+        <Route path="arrepentimiento" element={<Arrepentimiento />} />
+
 
         <Route path="*" element={<NotFound />} />
       </Route>

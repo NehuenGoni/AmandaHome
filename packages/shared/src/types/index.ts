@@ -9,3 +9,4 @@ export * from "./stockMovement.js";
 export * from "./supplierPurchase.js";
 export * from "./storeSale.js";
 export * from "./cashSession.js";
+export * from "./withdrawal.js";

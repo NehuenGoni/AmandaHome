@@ -1,3 +1,4 @@
+import { BUSINESS } from "@amanda/shared";
 import { Instagram } from "lucide-react";
 import { Link } from "react-router-dom";
 import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
@@ -15,7 +16,7 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-3 text-text-muted">
               <a
-                href="https://www.instagram.com/homedecoamanda/"
+                href={BUSINESS.instagramUrl}
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Instagram de Amanda Home & Deco"
@@ -24,19 +25,19 @@ export function Footer() {
                 <Instagram className="size-4" />
               </a>
               <a
-                href="https://wa.me/5491137582353"
+                href={BUSINESS.whatsappUrl}
                 target="_blank"
                 rel="noreferrer"
                 aria-label="WhatsApp de Amanda Home & Deco"
                 className="inline-flex items-center gap-1.5 text-xs transition-colors hover:text-accent-deep"
               >
                 <WhatsAppIcon className="size-4" />
-                11 3758-2353
+                {BUSINESS.phone}
               </a>
             </div>
           </div>
         </div>
-        <div className="flex gap-10 text-xs">
+        <div className="flex flex-wrap gap-x-10 gap-y-6 text-xs">
           <div className="flex flex-col gap-1.5">
             <span className="font-medium text-text">Tienda</span>
             <Link to="/catalogo" className="text-text-muted hover:text-accent-deep">
@@ -54,6 +55,32 @@ export function Footer() {
             <Link to="/login" className="text-text-muted hover:text-accent-deep">
               Ingresar
             </Link>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="font-medium text-text">Legales</span>
+            <Link to="/terminos-y-condiciones" className="text-text-muted hover:text-accent-deep">
+              Términos y condiciones
+            </Link>
+            <Link to="/cambios-y-devoluciones" className="text-text-muted hover:text-accent-deep">
+              Cambios y devoluciones
+            </Link>
+            <Link to="/politica-de-privacidad" className="text-text-muted hover:text-accent-deep">
+              Privacidad
+            </Link>
+            <Link to="/contacto" className="text-text-muted hover:text-accent-deep">
+              Contacto
+            </Link>
+            <Link to="/arrepentimiento" className="font-medium text-accent-deep hover:underline">
+              Botón de arrepentimiento
+            </Link>
+            <a
+              href={BUSINESS.consumerDefenseUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-text-muted hover:text-accent-deep"
+            >
+              Defensa del Consumidor
+            </a>
           </div>
         </div>
       </div>

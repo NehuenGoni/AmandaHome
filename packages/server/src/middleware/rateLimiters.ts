@@ -30,3 +30,12 @@ export const forgotPasswordRateLimiter = rateLimit({
   skip,
   message: { message: "Demasiadas solicitudes, intentá de nuevo más tarde", code: "TOO_MANY_REQUESTS" },
 });
+
+export const withdrawalRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip,
+  message: { message: "Demasiadas solicitudes, intentá de nuevo más tarde", code: "TOO_MANY_REQUESTS" },
+});

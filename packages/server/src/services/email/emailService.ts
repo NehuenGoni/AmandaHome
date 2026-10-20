@@ -11,6 +11,9 @@ import {
   type StoreSaleReceiptData,
   passwordResetTemplate,
   welcomeTemplate,
+  withdrawalConfirmationTemplate,
+  withdrawalNotificationTemplate,
+  type WithdrawalEmailData,
 } from "./templates.js";
 
 interface SendEmailParams {
@@ -125,4 +128,15 @@ export function sendStoreSaleReceiptEmail(
 ): Promise<void> {
   const { subject, html } = storeSaleReceiptTemplate(sale, store);
   return sendEmail({ to, subject, html });
+}
+
+export function sendWithdrawalConfirmationEmail(to: string, data: WithdrawalEmailData): void {
+  const { subject, html } = withdrawalConfirmationTemplate(data);
+  void sendEmail({ to, subject, html });
+}
+
+/** Aviso interno al local; llega a la casilla de contacto configurada. */
+export function sendWithdrawalNotificationEmail(data: WithdrawalEmailData, orderMatched: boolean): void {
+  const { subject, html } = withdrawalNotificationTemplate(data, orderMatched);
+  void sendEmail({ to: env.EMAIL_REPLY_TO, subject, html });
 }

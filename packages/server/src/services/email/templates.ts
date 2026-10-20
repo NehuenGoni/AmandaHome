@@ -185,3 +185,50 @@ export function storeSaleReceiptTemplate(
     ),
   };
 }
+
+export interface WithdrawalEmailData {
+  requestNumber: number;
+  orderNumber: number;
+  fullName: string;
+  email: string;
+  reason?: string;
+  needsReview: boolean;
+  createdAt: Date;
+}
+
+function formatDateTime(date: Date): string {
+  return date.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
+}
+
+/** Constancia al cliente: la Res. 424/2020 exige confirmar la recepción del trámite. */
+export function withdrawalConfirmationTemplate(data: WithdrawalEmailData): EmailTemplate {
+  return {
+    subject: `Recibimos tu solicitud de arrepentimiento #${data.requestNumber}`,
+    html: wrapper(
+      `Hola ${escapeHtml(data.fullName)}, recibimos tu solicitud`,
+      `<p style="color:${BRAND.textMuted};">Registramos tu solicitud de arrepentimiento para el pedido <strong>#${data.orderNumber}</strong>.</p>
+      <p style="color:${BRAND.textMuted};">Nº de trámite: <strong>${data.requestNumber}</strong><br/>Fecha: ${formatDateTime(data.createdAt)}</p>
+      <p style="color:${BRAND.textMuted};">Nos vamos a poner en contacto con vos para coordinar la devolución y el reembolso.</p>`,
+    ),
+  };
+}
+
+export function withdrawalNotificationTemplate(data: WithdrawalEmailData, orderMatched: boolean): EmailTemplate {
+  const warning = !orderMatched
+    ? "El pedido y el email no coinciden con ningún registro: verificar manualmente."
+    : data.needsReview
+      ? "El pedido está fuera del plazo de 10 días: revisar manualmente."
+      : "";
+  return {
+    subject: `Arrepentimiento #${data.requestNumber} — pedido #${data.orderNumber}`,
+    html: wrapper(
+      "Nueva solicitud de arrepentimiento",
+      `${warning ? `<p style="color:#B3261E;"><strong>${warning}</strong></p>` : ""}
+      <p style="color:${BRAND.textMuted};">Trámite <strong>#${data.requestNumber}</strong> · ${formatDateTime(data.createdAt)}<br/>
+      Pedido: <strong>#${data.orderNumber}</strong><br/>
+      Nombre: ${escapeHtml(data.fullName)}<br/>
+      Email: ${escapeHtml(data.email)}<br/>
+      Motivo: ${data.reason ? escapeHtml(data.reason) : "—"}</p>`,
+    ),
+  };
+}
