@@ -38,7 +38,15 @@ export function setAuthFailureHandler(handler: (() => void) | null): void {
 
 let refreshPromise: Promise<boolean> | null = null;
 
-async function refreshAccessToken(): Promise<boolean> {
+/**
+ * Único punto de entrada para refrescar el access token: tanto el reintento
+ * automático ante un 401 como el refresco inicial de AuthContext pasan por
+ * acá, para que nunca haya dos refrescos en vuelo a la vez. El refresh token
+ * rota en cada uso (de un solo uso) y si el server detecta uno reusado
+ * revoca toda la sesión por seguridad: dos llamadas concurrentes con el
+ * mismo refresh token terminarían tirando abajo la sesión entera.
+ */
+export async function refreshAccessToken(): Promise<boolean> {
   refreshPromise ??= (async () => {
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, { method: "POST", credentials: "include" });

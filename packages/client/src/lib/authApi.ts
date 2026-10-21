@@ -1,5 +1,5 @@
 import type { User } from "@amanda/shared";
-import { apiFetch } from "./apiClient.js";
+import { apiFetch, getAccessToken, refreshAccessToken } from "./apiClient.js";
 
 export interface AuthResponse {
   user: User;
@@ -34,8 +34,16 @@ export const register = (input: RegisterInput) =>
 export const login = (input: LoginInput) =>
   apiFetch<AuthResponse>("/auth/login", { method: "POST", body: input, ...skipAuthRetry });
 
-export const refresh = () =>
-  apiFetch<{ accessToken: string }>("/auth/refresh", { method: "POST", ...skipAuthRetry });
+/**
+ * Pasa por el mismo refreshAccessToken que usa el reintento automático ante
+ * un 401 (ver apiClient.ts), para que nunca haya dos refrescos en vuelo al
+ * mismo tiempo pisándose el refresh token rotativo.
+ */
+export const refresh = async (): Promise<{ accessToken: string }> => {
+  const refreshed = await refreshAccessToken();
+  if (!refreshed) throw new Error("No se pudo refrescar la sesión");
+  return { accessToken: getAccessToken()! };
+};
 
 export const logout = () => apiFetch<void>("/auth/logout", { method: "POST", ...skipAuthRetry });
 
