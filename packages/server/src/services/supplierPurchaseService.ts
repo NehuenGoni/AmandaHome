@@ -1,8 +1,9 @@
 import type { PaginatedResult } from "@amanda/shared";
 import { sumCents } from "@amanda/shared";
+import { runInTransaction } from "../config/db.js";
 import { Product, type IProductVariant } from "../models/Product.js";
 import { SupplierPurchase, type SupplierPurchaseDocument } from "../models/SupplierPurchase.js";
-import { NotFoundError } from "../utils/AppError.js";
+import { BadRequestError, NotFoundError } from "../utils/AppError.js";
 import type {
   CreateSupplierPurchaseInput,
   ListSupplierPurchasesQuery,
@@ -17,10 +18,8 @@ function findVariant(
 }
 
 /**
- * Crea la compra y luego incrementa stock ítem por ítem, registrando el
- * StockMovement purchase_in correspondiente: a diferencia de una venta, una
- * entrada de mercadería no tiene condición de "stock insuficiente" que
- * pueda fallar a mitad de camino.
+ * Crea la compra e incrementa stock ítem por ítem, registrando el
+ * StockMovement purchase_in correspondiente, todo dentro de una transacción.
  */
 export async function createSupplierPurchase(
   input: CreateSupplierPurchaseInput,
@@ -37,6 +36,9 @@ export async function createSupplierPurchase(
     if (!product || !variant) {
       throw new NotFoundError(`Producto o variante no encontrados (${item.variantSku})`);
     }
+    if (product.archivedAt) {
+      throw new BadRequestError(`El producto ${product.name} está archivado: restauralo antes de cargar compras`);
+    }
     return {
       product: product._id,
       variantSku: sku,
@@ -48,23 +50,33 @@ export async function createSupplierPurchase(
 
   const totalCost = sumCents(...items.map((i) => i.totalCost));
 
-  const purchase = await SupplierPurchase.create({
-    supplierName: input.supplierName,
-    items,
-    totalCost,
-    purchaseDate: input.purchaseDate ?? new Date(),
-    notes: input.notes,
-    createdBy: adminId,
-  });
-
-  const changes: StockChange[] = [];
-  for (const item of items) {
-    const before = await Product.findOneAndUpdate(
-      { _id: item.product, "variants.sku": item.variantSku },
-      { $inc: { "variants.$.stock": item.quantity } },
+  // La compra, el ingreso de stock y los movimientos son todo o nada.
+  return runInTransaction(async (session) => {
+    const [purchase] = await SupplierPurchase.create(
+      [
+        {
+          supplierName: input.supplierName,
+          items,
+          totalCost,
+          purchaseDate: input.purchaseDate ?? new Date(),
+          notes: input.notes,
+          createdBy: adminId,
+        },
+      ],
+      { session },
     );
-    const variant = before?.variants.find((v) => v.sku === item.variantSku);
-    if (before && variant) {
+
+    const changes: StockChange[] = [];
+    for (const item of items) {
+      const before = await Product.findOneAndUpdate(
+        { _id: item.product, "variants.sku": item.variantSku },
+        { $inc: { "variants.$.stock": item.quantity } },
+        { session },
+      );
+      const variant = before?.variants.find((v) => v.sku === item.variantSku);
+      if (!before || !variant) {
+        throw new NotFoundError(`Producto o variante no encontrados (${item.variantSku})`);
+      }
       changes.push({
         product: item.product.toString(),
         variantSku: item.variantSku,
@@ -73,15 +85,14 @@ export async function createSupplierPurchase(
         newStock: variant.stock + item.quantity,
       });
     }
-  }
 
-  await recordMovements(changes, {
-    type: "purchase_in",
-    reference: purchase._id.toString(),
-    createdBy: adminId,
+    await recordMovements(
+      changes,
+      { type: "purchase_in", reference: purchase!._id.toString(), createdBy: adminId },
+      session,
+    );
+    return purchase!;
   });
-
-  return purchase;
 }
 
 export async function listSupplierPurchases(

@@ -1,10 +1,10 @@
-import type { Product } from "@amanda/shared";
+import type { PublicProduct } from "@amanda/shared";
 import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/apiClient";
 import { getProductBySlug } from "@/lib/productsApi";
 
 export function useProduct(slug: string | undefined) {
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<PublicProduct | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

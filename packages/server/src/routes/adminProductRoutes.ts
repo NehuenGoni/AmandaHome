@@ -35,3 +35,8 @@ adminProductRouter.delete(
   validateRequest(mongoIdParamSchema, "params"),
   productController.deleteProduct,
 );
+adminProductRouter.post(
+  "/:id/restore",
+  validateRequest(mongoIdParamSchema, "params"),
+  productController.restoreProduct,
+);

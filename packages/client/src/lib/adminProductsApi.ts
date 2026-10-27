@@ -8,6 +8,7 @@ export interface AdminListProductsParams {
   search?: string;
   isFeatured?: boolean;
   includeInactive?: boolean;
+  archived?: boolean;
 }
 
 export interface ProductVariantInput {
@@ -64,10 +65,18 @@ export const getAdminProduct = (id: string) => apiGet<{ product: Product }>(`/ad
 export const createProduct = (input: ProductInput) =>
   apiPost<{ product: Product }>("/admin/products", input);
 
-export const updateProduct = (id: string, input: Partial<ProductInput>) =>
+export type ProductUpdateInput = Partial<Omit<ProductInput, "variants">> & {
+  variants?: Array<Omit<ProductVariantInput, "stock">>;
+};
+
+export const updateProduct = (id: string, input: ProductUpdateInput) =>
   apiPatch<{ product: Product }>(`/admin/products/${id}`, input);
 
-export const deleteProduct = (id: string) => apiDelete<void>(`/admin/products/${id}`);
+/** Baja lógica: el producto se archiva, no se borra. */
+export const archiveProduct = (id: string) => apiDelete<void>(`/admin/products/${id}`);
+
+export const restoreProduct = (id: string) =>
+  apiPost<{ product: Product }>(`/admin/products/${id}/restore`);
 
 export const signProductImageUpload = () =>
   apiPost<{ signature: string; timestamp: number; apiKey: string; cloudName: string; folder: string }>(

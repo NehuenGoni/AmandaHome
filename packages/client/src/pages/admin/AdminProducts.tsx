@@ -1,5 +1,5 @@
 import { formatMoney } from "@amanda/shared";
-import { Package, Plus, Search, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Package, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/Badge";
@@ -11,7 +11,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { Spinner } from "@/components/ui/Spinner";
 import { useAdminProducts } from "@/hooks/admin/useAdminProducts";
 import { ApiError } from "@/lib/apiClient";
-import { deleteProduct } from "@/lib/adminProductsApi";
+import { archiveProduct, restoreProduct } from "@/lib/adminProductsApi";
 import { getMinPrice, getTotalStock, hasPriceRange } from "@/lib/productPricing";
 
 const PAGE_SIZE = 20;
@@ -19,8 +19,9 @@ const PAGE_SIZE = 20;
 export default function AdminProducts() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [pendingArchive, setPendingArchive] = useState<string | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const { data, isLoading, reload } = useAdminProducts({
@@ -28,20 +29,31 @@ export default function AdminProducts() {
     limit: PAGE_SIZE,
     search: search || undefined,
     includeInactive: true,
+    archived: showArchived,
   });
 
-  async function handleDelete() {
-    if (!pendingDelete) return;
-    setIsDeleting(true);
+  async function handleArchive() {
+    if (!pendingArchive) return;
+    setIsArchiving(true);
     setError(null);
     try {
-      await deleteProduct(pendingDelete);
-      setPendingDelete(null);
+      await archiveProduct(pendingArchive);
+      setPendingArchive(null);
       reload();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No pudimos eliminar el producto");
+      setError(err instanceof ApiError ? err.message : "No pudimos archivar el producto");
     } finally {
-      setIsDeleting(false);
+      setIsArchiving(false);
+    }
+  }
+
+  async function handleRestore(id: string) {
+    setError(null);
+    try {
+      await restoreProduct(id);
+      reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No pudimos restaurar el producto");
     }
   }
 
@@ -57,7 +69,8 @@ export default function AdminProducts() {
         </Link>
       </div>
 
-      <div className="relative max-w-sm">
+      <div className="flex flex-wrap items-center gap-4">
+      <div className="relative w-full max-w-sm">
         <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
         <Input
           placeholder="Buscar productos…"
@@ -68,6 +81,19 @@ export default function AdminProducts() {
             setPage(1);
           }}
         />
+      </div>
+      <label className="flex items-center gap-2 text-sm text-text">
+        <input
+          type="checkbox"
+          checked={showArchived}
+          onChange={(e) => {
+            setShowArchived(e.target.checked);
+            setPage(1);
+          }}
+          className="size-4 rounded border-border accent-accent"
+        />
+        Ver archivados
+      </label>
       </div>
 
       {error && <InlineMessage tone="error">{error}</InlineMessage>}
@@ -102,14 +128,25 @@ export default function AdminProducts() {
                 <div className="flex shrink-0 items-center gap-3">
                   {!product.isActive && <Badge tone="neutral">Inactivo</Badge>}
                   {product.isFeatured && <Badge tone="accent">Destacado</Badge>}
-                  <button
-                    type="button"
-                    onClick={() => setPendingDelete(product._id)}
-                    aria-label={`Eliminar ${product.name}`}
-                    className="flex size-8 items-center justify-center rounded-full text-accent2-deep hover:bg-surface-alt"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
+                  {product.archivedAt ? (
+                    <button
+                      type="button"
+                      onClick={() => handleRestore(product._id)}
+                      aria-label={`Restaurar ${product.name}`}
+                      className="flex size-8 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt"
+                    >
+                      <ArchiveRestore className="size-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setPendingArchive(product._id)}
+                      aria-label={`Archivar ${product.name}`}
+                      className="flex size-8 items-center justify-center rounded-full text-accent2-deep hover:bg-surface-alt"
+                    >
+                      <Archive className="size-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -117,18 +154,22 @@ export default function AdminProducts() {
           <Pagination page={data.page} totalPages={data.totalPages} onChange={setPage} />
         </>
       ) : (
-        <EmptyState icon={Package} title="No hay productos" description="Creá el primero para empezar a vender." />
+        <EmptyState
+          icon={Package}
+          title={showArchived ? "No hay productos archivados" : "No hay productos"}
+          description={showArchived ? "Los productos que archives aparecen acá." : "Creá el primero para empezar a vender."}
+        />
       )}
 
       <ConfirmDialog
-        open={pendingDelete !== null}
-        title="¿Eliminar este producto?"
-        description="Esta acción no se puede deshacer."
-        confirmLabel="Eliminar"
+        open={pendingArchive !== null}
+        title="¿Archivar este producto?"
+        description="Deja de verse en la tienda y en el listado, pero se conserva el historial de ventas y stock. Podés restaurarlo cuando quieras."
+        confirmLabel="Archivar"
         tone="danger"
-        isLoading={isDeleting}
-        onConfirm={handleDelete}
-        onCancel={() => setPendingDelete(null)}
+        isLoading={isArchiving}
+        onConfirm={handleArchive}
+        onCancel={() => setPendingArchive(null)}
       />
     </div>
   );

@@ -1,10 +1,10 @@
-import type { Product } from "@amanda/shared";
+import type { PublicProduct } from "@amanda/shared";
 import { motion } from "framer-motion";
 import { PackageSearch } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ProductCard } from "./ProductCard";
 
-export function ProductGrid({ products }: { products: Product[] }) {
+export function ProductGrid({ products }: { products: PublicProduct[] }) {
   if (products.length === 0) {
     return (
       <EmptyState

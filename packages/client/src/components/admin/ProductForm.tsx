@@ -37,6 +37,8 @@ export function ProductForm({ initialValue, onSubmit, submitLabel = "Guardar pro
   const { categories } = useAdminCategories();
   const [values, setValues] = useState<ProductInput>(() => toValues(initialValue));
   const [tagsText, setTagsText] = useState(() => (initialValue?.tags ?? []).join(", "));
+  // Variantes que ya existen en el servidor: su stock se ajusta solo desde Inventario.
+  const [persistedSkus] = useState(() => new Set((initialValue?.variants ?? []).map((v) => v.sku)));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -124,7 +126,11 @@ export function ProductForm({ initialValue, onSubmit, submitLabel = "Guardar pro
       </div>
 
       <ProductImagesEditor images={values.images} onChange={(images) => set("images", images)} />
-      <ProductVariantsEditor variants={values.variants} onChange={(variants) => set("variants", variants)} />
+      <ProductVariantsEditor
+        variants={values.variants}
+        persistedSkus={persistedSkus}
+        onChange={(variants) => set("variants", variants)}
+      />
 
       {error && <InlineMessage tone="error">{error}</InlineMessage>}
 

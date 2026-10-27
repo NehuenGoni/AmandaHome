@@ -20,9 +20,15 @@ function emptyVariant(): ProductVariantInput {
 interface ProductVariantsEditorProps {
   variants: ProductVariantInput[];
   onChange: (variants: ProductVariantInput[]) => void;
+  /** SKUs que ya existen en el servidor: su stock y su SKU no se editan desde acá. */
+  persistedSkus?: ReadonlySet<string>;
 }
 
-export function ProductVariantsEditor({ variants, onChange }: ProductVariantsEditorProps) {
+export function ProductVariantsEditor({
+  variants,
+  onChange,
+  persistedSkus = new Set(),
+}: ProductVariantsEditorProps) {
   function update(index: number, patch: Partial<ProductVariantInput>) {
     onChange(variants.map((v, i) => (i === index ? { ...v, ...patch } : v)));
   }
@@ -45,7 +51,9 @@ export function ProductVariantsEditor({ variants, onChange }: ProductVariantsEdi
       </div>
 
       <div className="flex flex-col gap-4">
-        {variants.map((variant, index) => (
+        {variants.map((variant, index) => {
+          const isPersisted = persistedSkus.has(variant.sku);
+          return (
           <Card key={index} className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-text-muted">Variante {index + 1}</p>
@@ -65,6 +73,7 @@ export function ProductVariantsEditor({ variants, onChange }: ProductVariantsEdi
               <Input
                 label="SKU"
                 required
+                disabled={isPersisted}
                 value={variant.sku}
                 onChange={(e) => update(index, { sku: e.target.value })}
               />
@@ -99,6 +108,8 @@ export function ProductVariantsEditor({ variants, onChange }: ProductVariantsEdi
                 label="Stock"
                 type="number"
                 min={0}
+                disabled={isPersisted}
+                hint={isPersisted ? "Se ajusta desde Inventario" : undefined}
                 value={variant.stock}
                 onChange={(e) => update(index, { stock: Number(e.target.value) })}
               />
@@ -153,7 +164,8 @@ export function ProductVariantsEditor({ variants, onChange }: ProductVariantsEdi
               />
             </div>
           </Card>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

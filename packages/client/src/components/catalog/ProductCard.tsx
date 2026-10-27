@@ -1,11 +1,11 @@
-import type { Product } from "@amanda/shared";
+import type { PublicProduct } from "@amanda/shared";
 import { motion } from "framer-motion";
 import { ImageOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PriceTag } from "@/components/ui/PriceTag";
 import { getMinPrice, getTotalStock, hasPriceRange } from "@/lib/productPricing";
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({ product }: { product: PublicProduct }) {
   const image = product.images[0];
   const outOfStock = getTotalStock(product) <= 0;
 

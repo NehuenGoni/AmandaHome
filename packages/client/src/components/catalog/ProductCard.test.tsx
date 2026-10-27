@@ -1,10 +1,10 @@
-import type { Product } from "@amanda/shared";
+import type { PublicProduct } from "@amanda/shared";
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { ProductCard } from "./ProductCard.js";
 
-function buildProduct(overrides: Partial<Product> = {}): Product {
+function buildProduct(overrides: Partial<PublicProduct> = {}): PublicProduct {
   return {
     _id: "1",
     name: "Vela Aromática",
@@ -20,7 +20,6 @@ function buildProduct(overrides: Partial<Product> = {}): Product {
         attributeName: "Color",
         attributeValue: "Verde",
         price: 250000,
-        costPrice: 100000,
         stock: 5,
         lowStockThreshold: 1,
       },
@@ -31,7 +30,7 @@ function buildProduct(overrides: Partial<Product> = {}): Product {
   };
 }
 
-function renderCard(product: Product) {
+function renderCard(product: PublicProduct) {
   return render(
     <BrowserRouter>
       <ProductCard product={product} />
@@ -55,7 +54,6 @@ describe("ProductCard", () => {
             attributeName: "Tamaño",
             attributeValue: "Chico",
             price: 200000,
-            costPrice: 90000,
             stock: 5,
             lowStockThreshold: 1,
           },
@@ -64,7 +62,6 @@ describe("ProductCard", () => {
             attributeName: "Tamaño",
             attributeValue: "Grande",
             price: 350000,
-            costPrice: 150000,
             stock: 5,
             lowStockThreshold: 1,
           },
@@ -83,7 +80,6 @@ describe("ProductCard", () => {
             attributeName: "Color",
             attributeValue: "Verde",
             price: 250000,
-            costPrice: 100000,
             stock: 0,
             lowStockThreshold: 1,
           },

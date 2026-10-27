@@ -1,10 +1,10 @@
-import type { PaginatedResult, Product } from "@amanda/shared";
+import type { PaginatedResult, PublicProduct } from "@amanda/shared";
 import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/apiClient";
 import { listProducts, type ListProductsParams } from "@/lib/productsApi";
 
 export function useProducts(params: ListProductsParams) {
-  const [data, setData] = useState<PaginatedResult<Product> | null>(null);
+  const [data, setData] = useState<PaginatedResult<PublicProduct> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

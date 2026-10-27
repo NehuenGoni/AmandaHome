@@ -1,11 +1,12 @@
 import type { PaginatedResult, StockMovementType } from "@amanda/shared";
-import type { FilterQuery } from "mongoose";
+import type { ClientSession, FilterQuery } from "mongoose";
 import { Product, type IProduct, type IProductVariant } from "../models/Product.js";
 import {
   StockMovement,
   type IStockMovement,
   type StockMovementDocument,
 } from "../models/StockMovement.js";
+import { runInTransaction } from "../config/db.js";
 import { BadRequestError, NotFoundError } from "../utils/AppError.js";
 import type { AdjustStockInput, ListMovementsQuery } from "../validators/inventoryValidators.js";
 
@@ -25,7 +26,11 @@ interface MovementMeta {
 }
 
 /** Inserción en lote: el log es append-only, no hace falta ni tiene sentido hacerlo secuencial. */
-export async function recordMovements(changes: StockChange[], meta: MovementMeta): Promise<void> {
+export async function recordMovements(
+  changes: StockChange[],
+  meta: MovementMeta,
+  session?: ClientSession,
+): Promise<void> {
   if (changes.length === 0) return;
   await StockMovement.insertMany(
     changes.map((change) => ({
@@ -39,6 +44,7 @@ export async function recordMovements(changes: StockChange[], meta: MovementMeta
       note: meta.note,
       createdBy: meta.createdBy,
     })),
+    { session },
   );
 }
 
@@ -56,12 +62,14 @@ interface StockRestoreItem {
 export async function returnStock(
   items: StockRestoreItem[],
   meta: { reference?: string; note?: string; createdBy?: string },
+  session?: ClientSession,
 ): Promise<void> {
   const changes: StockChange[] = [];
   for (const item of items) {
     const before = await Product.findOneAndUpdate(
       { _id: item.product, "variants.sku": item.variantSku },
       { $inc: { "variants.$.stock": item.quantity } },
+      { session },
     );
     const variant = before?.variants.find((v) => v.sku === item.variantSku);
     if (!before || !variant) continue;
@@ -74,7 +82,7 @@ export async function returnStock(
       newStock: variant.stock + item.quantity,
     });
   }
-  await recordMovements(changes, { type: "return", ...meta });
+  await recordMovements(changes, { type: "return", ...meta }, session);
 }
 
 function findVariant(
@@ -105,22 +113,32 @@ export async function adjustStock(input: AdjustStockInput, adminId: string): Pro
     },
   };
 
-  const updated = await Product.findOneAndUpdate(filter, {
-    $inc: { "variants.$.stock": input.quantityChange },
-  });
-  if (!updated) {
-    throw new BadRequestError("El ajuste dejaría el stock en un valor negativo");
-  }
+  return runInTransaction(async (session) => {
+    const updated = await Product.findOneAndUpdate(
+      filter,
+      { $inc: { "variants.$.stock": input.quantityChange } },
+      { session },
+    );
+    if (!updated) {
+      throw new BadRequestError("El ajuste dejaría el stock en un valor negativo");
+    }
 
-  return StockMovement.create({
-    product: input.productId,
-    variantSku: sku,
-    type: "adjustment",
-    quantity: input.quantityChange,
-    previousStock,
-    newStock,
-    note: input.note,
-    createdBy: adminId,
+    const [movement] = await StockMovement.create(
+      [
+        {
+          product: input.productId,
+          variantSku: sku,
+          type: "adjustment",
+          quantity: input.quantityChange,
+          previousStock,
+          newStock,
+          note: input.note,
+          createdBy: adminId,
+        },
+      ],
+      { session },
+    );
+    return movement!;
   });
 }
 

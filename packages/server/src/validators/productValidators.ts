@@ -37,7 +37,10 @@ export const createProductSchema = z.object({
 });
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 
-export const updateProductSchema = createProductSchema.partial();
+// El stock solo cambia por movimientos (ajuste, compra, venta): nunca desde la edición del producto.
+export const updateProductSchema = createProductSchema
+  .extend({ variants: z.array(variantSchema.omit({ stock: true })).min(1, "El producto debe tener al menos una variante") })
+  .partial();
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 
 export const listProductsQuerySchema = z.object({
@@ -57,6 +60,10 @@ export const listProductsQuerySchema = z.object({
 export type ListProductsQuery = z.infer<typeof listProductsQuerySchema>;
 
 export const adminListProductsQuerySchema = listProductsQuerySchema.extend({
+  archived: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
   includeInactive: z
     .enum(["true", "false"])
     .optional()

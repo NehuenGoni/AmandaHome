@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { type ClientSession } from "mongoose";
 import { env } from "./env.js";
 
 export async function connectDB(): Promise<void> {
@@ -9,4 +9,12 @@ export async function connectDB(): Promise<void> {
 
 export async function disconnectDB(): Promise<void> {
   await mongoose.disconnect();
+}
+
+/**
+ * Ejecuta `fn` dentro de una transacción de Mongo (requiere replica set).
+ * Mongoose reintenta automáticamente los TransientTransactionError.
+ */
+export function runInTransaction<T>(fn: (session: ClientSession) => Promise<T>): Promise<T> {
+  return mongoose.connection.transaction(fn);
 }

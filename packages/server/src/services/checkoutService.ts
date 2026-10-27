@@ -1,5 +1,6 @@
 import { sumCents } from "@amanda/shared";
-import { Types } from "mongoose";
+import { Types, type ClientSession } from "mongoose";
+import { runInTransaction } from "../config/db.js";
 import { isMercadoPagoConfigured } from "../config/env.js";
 import { getNextSequence } from "../models/Counter.js";
 import { Cart } from "../models/Cart.js";
@@ -19,55 +20,50 @@ export interface StockDecrement {
 }
 
 /**
- * Sin transacciones multi-doc: cada decremento es atómico por sí solo
- * (findOneAndUpdate con filtro de stock suficiente), y si uno falla se
- * revierten manualmente los que ya se aplicaron (sin dejar constancia en
- * el log: la venta nunca llegó a concretarse). Los movimientos reales se
- * registran recién si la orden se crea con éxito.
+ * Debe llamarse dentro de una transacción (`runInTransaction`): cada decremento
+ * es atómico (findOneAndUpdate con filtro de stock suficiente) y, si uno falla,
+ * el abort de la transacción revierte los que ya se aplicaron. Los movimientos
+ * del log se registran en la misma transacción, recién cuando la venta se concreta.
  */
-export async function decrementStock(items: StockDecrement[]): Promise<StockChange[]> {
-  const applied: StockDecrement[] = [];
+export async function decrementStock(
+  items: StockDecrement[],
+  session: ClientSession,
+): Promise<StockChange[]> {
   const changes: StockChange[] = [];
-  try {
-    for (const item of items) {
-      const before = await Product.findOneAndUpdate(
-        // $elemMatch: sku y stock deben cumplirse en la MISMA variante; con paths sueltos
-        // podría matchear una variante y decrementar (posicional $) otra distinta.
-        {
-          _id: item.product,
-          variants: { $elemMatch: { sku: item.variantSku, stock: { $gte: item.quantity } } },
-        },
-        { $inc: { "variants.$.stock": -item.quantity } },
-      );
-      const variant = before?.variants.find((v) => v.sku === item.variantSku);
-      if (!before || !variant) {
-        throw new BadRequestError(`Stock insuficiente para ${item.variantSku}`);
-      }
-      applied.push(item);
-      changes.push({
-        product: item.product.toString(),
-        variantSku: item.variantSku,
-        quantity: -item.quantity,
-        previousStock: variant.stock,
-        newStock: variant.stock - item.quantity,
-      });
+  for (const item of items) {
+    const before = await Product.findOneAndUpdate(
+      // $elemMatch: sku y stock deben cumplirse en la MISMA variante; con paths sueltos
+      // podría matchear una variante y decrementar (posicional $) otra distinta.
+      {
+        _id: item.product,
+        variants: { $elemMatch: { sku: item.variantSku, stock: { $gte: item.quantity } } },
+      },
+      { $inc: { "variants.$.stock": -item.quantity } },
+      { session },
+    );
+    const variant = before?.variants.find((v) => v.sku === item.variantSku);
+    if (!before || !variant) {
+      throw new BadRequestError(`Stock insuficiente para ${item.variantSku}`);
     }
-    return changes;
-  } catch (err) {
-    await restockItems(applied);
-    throw err;
+    changes.push({
+      product: item.product.toString(),
+      variantSku: item.variantSku,
+      quantity: -item.quantity,
+      previousStock: variant.stock,
+      newStock: variant.stock - item.quantity,
+    });
   }
+  return changes;
 }
 
-export async function restockItems(items: StockDecrement[]): Promise<void> {
-  await Promise.all(
-    items.map((item) =>
-      Product.updateOne(
-        { _id: item.product, "variants.sku": item.variantSku },
-        { $inc: { "variants.$.stock": item.quantity } },
-      ),
-    ),
-  );
+export async function restockItems(items: StockDecrement[], session: ClientSession): Promise<void> {
+  for (const item of items) {
+    await Product.updateOne(
+      { _id: item.product, "variants.sku": item.variantSku },
+      { $inc: { "variants.$.stock": item.quantity } },
+      { session },
+    );
+  }
 }
 
 export async function createOrderFromCart(
@@ -157,93 +153,96 @@ export async function createOrderFromCart(
   const shippingPackage =
     input.shippingMethod === "home" ? await getPackageForItems(shippingItems) : undefined;
 
-  // El stock se descuenta ANTES de crear la orden para que la reserva sea
-  // atómica ítem por ítem; si algo falla en el medio, se revierte todo sin
-  // dejar constancia en el log (la venta nunca llegó a concretarse).
-  const stockChanges = await decrementStock(stockDecrements);
-
   const orderNumber = await getNextSequence("orderNumber");
 
-  let order: OrderDocument;
-  try {
-    order = await Order.create({
-      orderNumber,
-      customer: userId,
-      items: orderItems,
-      subtotal,
-      shippingCost,
-      total,
-      status: "pending",
-      statusHistory: [{ status: "pending", changedAt: new Date() }],
-      paymentMethod: "mercado_pago",
-      paymentStatus: "pending",
-      shippingMethod: input.shippingMethod,
-      shippingAddress: address
-        ? {
-            label: address.label,
-            street: address.street,
-            number: address.number,
-            city: address.city,
-            province: address.province,
-            postalCode: address.postalCode,
-            country: address.country,
-            phone: address.phone,
-          }
-        : undefined,
-      shippingDetails:
-        input.shippingMethod === "home"
-          ? {
-              carrier: shippingOption.carrier ?? "correo_argentino",
-              service: undefined,
-              etaMinDays: shippingOption.etaMinDays,
-              etaMaxDays: shippingOption.etaMaxDays,
-              quotedAt: new Date(),
-              isFallback: shippingOption.isFallback,
-              packageWeight: shippingPackage?.weight,
-              packageHeight: shippingPackage?.height,
-              packageWidth: shippingPackage?.width,
-              packageLength: shippingPackage?.length,
-            }
-          : undefined,
-      notes: input.notes,
-    });
-  } catch (err) {
-    await restockItems(stockDecrements);
-    throw err;
-  }
+  // Transacción A: la reserva de stock y la creación de la orden son todo o
+  // nada. Si algo falla, el abort deja el stock intacto y sin movimientos.
+  const { order, stockChanges } = await runInTransaction(async (session) => {
+    const changes = await decrementStock(stockDecrements, session);
+    const [created] = await Order.create(
+      [
+        {
+          orderNumber,
+          customer: userId,
+          items: orderItems,
+          subtotal,
+          shippingCost,
+          total,
+          status: "pending",
+          statusHistory: [{ status: "pending", changedAt: new Date() }],
+          paymentMethod: "mercado_pago",
+          paymentStatus: "pending",
+          shippingMethod: input.shippingMethod,
+          shippingAddress: address
+            ? {
+                label: address.label,
+                street: address.street,
+                number: address.number,
+                city: address.city,
+                province: address.province,
+                postalCode: address.postalCode,
+                country: address.country,
+                phone: address.phone,
+              }
+            : undefined,
+          shippingDetails:
+            input.shippingMethod === "home"
+              ? {
+                  carrier: shippingOption.carrier ?? "correo_argentino",
+                  service: undefined,
+                  etaMinDays: shippingOption.etaMinDays,
+                  etaMaxDays: shippingOption.etaMaxDays,
+                  quotedAt: new Date(),
+                  isFallback: shippingOption.isFallback,
+                  packageWeight: shippingPackage?.weight,
+                  packageHeight: shippingPackage?.height,
+                  packageWidth: shippingPackage?.width,
+                  packageLength: shippingPackage?.length,
+                }
+              : undefined,
+          notes: input.notes,
+        },
+      ],
+      { session },
+    );
+    return { order: created!, stockChanges: changes };
+  });
 
-  // Recién si Mercado Pago acepta crear la preferencia se considera la venta
-  // concretada: se vacía el carrito y se deja constancia del movimiento de
-  // stock. Si falla, se devuelve el stock y se cancela la orden sin tocar
-  // el carrito, para que el cliente pueda reintentar desde cero.
+  // La preferencia de Mercado Pago es una llamada HTTP externa: va fuera de la
+  // transacción. Si falla, se devuelve el stock y se cancela la orden sin
+  // tocar el carrito (transacción C), para que el cliente pueda reintentar.
   let preference: { preferenceId: string; initPoint: string };
   const deadline = getPaymentDeadline(order);
   try {
     preference = await createPaymentPreference(order, deadline);
   } catch (err) {
-    await restockItems(stockDecrements);
-    order.status = "cancelled";
-    order.statusHistory.push({
-      status: "cancelled",
-      changedAt: new Date(),
-      note: "No se pudo iniciar el pago con Mercado Pago",
+    await runInTransaction(async (session) => {
+      await restockItems(stockDecrements, session);
+      order.status = "cancelled";
+      order.statusHistory.push({
+        status: "cancelled",
+        changedAt: new Date(),
+        note: "No se pudo iniciar el pago con Mercado Pago",
+      });
+      await order.save({ session });
     });
-    await order.save();
     throw err;
   }
 
-  order.paymentDetails = {
-    preferenceId: preference.preferenceId,
-    initPoint: preference.initPoint,
-    expiresAt: deadline,
-  };
-  await order.save();
-
-  await Cart.updateOne({ user: userId }, { $set: { items: [] } });
-  await recordMovements(stockChanges, {
-    type: "sale_out",
-    reference: order._id.toString(),
-    createdBy: userId,
+  // Transacción B: recién acá la venta se considera concretada.
+  await runInTransaction(async (session) => {
+    order.paymentDetails = {
+      preferenceId: preference.preferenceId,
+      initPoint: preference.initPoint,
+      expiresAt: deadline,
+    };
+    await order.save({ session });
+    await Cart.updateOne({ user: userId }, { $set: { items: [] } }, { session });
+    await recordMovements(
+      stockChanges,
+      { type: "sale_out", reference: order._id.toString(), createdBy: userId },
+      session,
+    );
   });
 
   return { order, checkoutUrl: preference.initPoint };

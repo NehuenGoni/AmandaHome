@@ -31,6 +31,13 @@ export interface Product extends WithTimestamps {
   tags: string[];
   isActive: boolean;
   isFeatured: boolean;
+  /** Baja lógica: solo el admin ve productos archivados. */
+  archivedAt?: string;
   images: ImageRef[];
   variants: ProductVariant[];
 }
+
+/** El costo es un dato interno: la API pública nunca lo devuelve. */
+export type PublicProductVariant = Omit<ProductVariant, "costPrice">;
+
+export type PublicProduct = Omit<Product, "variants"> & { variants: PublicProductVariant[] };

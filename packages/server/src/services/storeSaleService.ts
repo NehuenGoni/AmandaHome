@@ -8,6 +8,7 @@ import {
   type StoreSalesSummary,
 } from "@amanda/shared";
 import type { FilterQuery } from "mongoose";
+import { runInTransaction } from "../config/db.js";
 import { getNextSequence } from "../models/Counter.js";
 import { Product } from "../models/Product.js";
 import { StoreSale, type IStoreSale, type IStoreSaleItem, type StoreSaleDocument } from "../models/StoreSale.js";
@@ -20,7 +21,7 @@ import type {
   StoreSalesSummaryQuery,
 } from "../validators/storeSaleValidators.js";
 import { computeTotals, requireOpenSession } from "./cashSessionService.js";
-import { restockItems, decrementStock } from "./checkoutService.js";
+import { decrementStock } from "./checkoutService.js";
 import { sendStoreSaleReceiptEmail } from "./email/emailService.js";
 import { recordMovements, returnStock } from "./inventoryService.js";
 import { getShippingSettings } from "./shippingSettingsService.js";
@@ -102,42 +103,41 @@ export async function createStoreSale(
     variantSku: i.variantSku,
     quantity: i.quantity,
   }));
-  const stockChanges = await decrementStock(decrements);
+  const saleNumber = await getNextSequence("storeSaleNumber");
 
-  let sale: StoreSaleDocument;
-  try {
-    sale = await StoreSale.create({
-      saleNumber: await getNextSequence("storeSaleNumber"),
-      cashSession: session._id,
-      seller: adminId,
-      items,
-      subtotal,
-      discount: input.discount
-        ? { type: input.discount.type, value: input.discount.value, amount: globalDiscount }
-        : undefined,
-      total,
-      paymentMethod: input.paymentMethod,
-      cashReceived,
-      change,
-      paymentReference: input.paymentReference,
-      customer: { name: input.customer?.name, email: input.customer?.email },
-      notes: input.notes,
-    });
-  } catch (err) {
-    await restockItems(decrements);
-    throw err;
-  }
-
-  // La venta ya está hecha: si el log falla no se debe devolver error al cajero.
-  try {
-    await recordMovements(stockChanges, {
-      type: "sale_out",
-      reference: sale._id.toString(),
-      createdBy: adminId,
-    });
-  } catch (err) {
-    console.error(`[store-sale] no se pudo registrar el movimiento de stock de la venta ${sale._id}:`, err);
-  }
+  // Stock, venta y movimientos son todo o nada: si algo falla, el abort deja
+  // el stock intacto y sin movimientos en el log.
+  const sale = await runInTransaction(async (txn) => {
+    const stockChanges = await decrementStock(decrements, txn);
+    const [created] = await StoreSale.create(
+      [
+        {
+          saleNumber,
+          cashSession: session._id,
+          seller: adminId,
+          items,
+          subtotal,
+          discount: input.discount
+            ? { type: input.discount.type, value: input.discount.value, amount: globalDiscount }
+            : undefined,
+          total,
+          paymentMethod: input.paymentMethod,
+          cashReceived,
+          change,
+          paymentReference: input.paymentReference,
+          customer: { name: input.customer?.name, email: input.customer?.email },
+          notes: input.notes,
+        },
+      ],
+      { session: txn },
+    );
+    await recordMovements(
+      stockChanges,
+      { type: "sale_out", reference: created!._id.toString(), createdBy: adminId },
+      txn,
+    );
+    return created!;
+  });
 
   if (input.customer?.email) {
     void sendReceipt(sale, input.customer.email);
@@ -188,22 +188,30 @@ export async function voidStoreSale(
   }
 
   // Condición en el filtro: dos anulaciones simultáneas no pueden reponer el stock dos veces.
-  const sale = await StoreSale.findOneAndUpdate(
-    { _id: id, status: "completed", "returns.0": { $exists: false } },
-    { $set: { status: "voided", voidedAt: new Date(), voidedBy: adminId, voidReason: reason } },
-    { new: true },
-  );
-  if (!sale) throw new ConflictError("La venta ya fue anulada o tiene devoluciones registradas");
+  // La anulación y la reposición van en la misma transacción.
+  return runInTransaction(async (txn) => {
+    const sale = await StoreSale.findOneAndUpdate(
+      { _id: id, status: "completed", "returns.0": { $exists: false } },
+      { $set: { status: "voided", voidedAt: new Date(), voidedBy: adminId, voidReason: reason } },
+      { new: true, session: txn },
+    );
+    if (!sale) throw new ConflictError("La venta ya fue anulada o tiene devoluciones registradas");
 
-  await returnStock(
-    sale.items.map((i) => ({
-      product: i.product.toString(),
-      variantSku: i.variantSku,
-      quantity: i.quantity,
-    })),
-    { reference: sale._id.toString(), note: `Anulación de venta en local #${sale.saleNumber}`, createdBy: adminId },
-  );
-  return sale;
+    await returnStock(
+      sale.items.map((i) => ({
+        product: i.product.toString(),
+        variantSku: i.variantSku,
+        quantity: i.quantity,
+      })),
+      {
+        reference: sale._id.toString(),
+        note: `Anulación de venta en local #${sale.saleNumber}`,
+        createdBy: adminId,
+      },
+      txn,
+    );
+    return sale;
+  });
 }
 
 export async function returnStoreSaleItems(
@@ -269,46 +277,49 @@ export async function returnStoreSaleItems(
   }
 
   // El filtro por cantidad de devoluciones actúa de lock optimista: evita reintegrar dos veces en paralelo.
-  const updated = await StoreSale.findOneAndUpdate(
-    {
-      _id: id,
-      status: { $in: ["completed", "partially_returned"] },
-      returns: { $size: sale.returns.length },
-    },
-    {
-      $set: { status: isFinal ? "returned" : "partially_returned" },
-      $push: {
-        returns: {
-          items: returnItems.map(({ variantSku, quantity, amount: itemAmount }) => ({
-            variantSku,
-            quantity,
-            amount: itemAmount,
-          })),
-          amount,
-          refundMethod: input.refundMethod,
-          cashSession: session._id,
-          reason: input.reason,
-          createdBy: adminId,
+  return runInTransaction(async (txn) => {
+    const updated = await StoreSale.findOneAndUpdate(
+      {
+        _id: id,
+        status: { $in: ["completed", "partially_returned"] },
+        returns: { $size: sale.returns.length },
+      },
+      {
+        $set: { status: isFinal ? "returned" : "partially_returned" },
+        $push: {
+          returns: {
+            items: returnItems.map(({ variantSku, quantity, amount: itemAmount }) => ({
+              variantSku,
+              quantity,
+              amount: itemAmount,
+            })),
+            amount,
+            refundMethod: input.refundMethod,
+            cashSession: session._id,
+            reason: input.reason,
+            createdBy: adminId,
+          },
         },
       },
-    },
-    { new: true },
-  );
-  if (!updated) throw new ConflictError("La venta cambió mientras se procesaba. Reintentá.");
+      { new: true, session: txn },
+    );
+    if (!updated) throw new ConflictError("La venta cambió mientras se procesaba. Reintentá.");
 
-  await returnStock(
-    returnItems.map((i) => ({
-      product: i.product.toString(),
-      variantSku: i.variantSku,
-      quantity: i.quantity,
-    })),
-    {
-      reference: sale._id.toString(),
-      note: `Devolución de venta en local #${sale.saleNumber}`,
-      createdBy: adminId,
-    },
-  );
-  return updated;
+    await returnStock(
+      returnItems.map((i) => ({
+        product: i.product.toString(),
+        variantSku: i.variantSku,
+        quantity: i.quantity,
+      })),
+      {
+        reference: sale._id.toString(),
+        note: `Devolución de venta en local #${sale.saleNumber}`,
+        createdBy: adminId,
+      },
+      txn,
+    );
+    return updated;
+  });
 }
 
 export async function lookupByCode(code: string): Promise<StoreProductLookup> {

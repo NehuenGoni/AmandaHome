@@ -39,6 +39,8 @@ export interface IProduct {
   tags: string[];
   isActive: boolean;
   isFeatured: boolean;
+  /** Baja lógica: el producto se conserva por el historial (órdenes, ventas, movimientos). */
+  archivedAt?: Date;
   images: IProductImage[];
   variants: IProductVariant[];
 }
@@ -80,6 +82,7 @@ const productSchema = new Schema<IProduct>(
     tags: { type: [String], default: [] },
     isActive: { type: Boolean, default: true },
     isFeatured: { type: Boolean, default: false },
+    archivedAt: { type: Date },
     images: { type: [productImageSchema], default: [] },
     variants: {
       type: [productVariantSchema],

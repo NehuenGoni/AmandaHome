@@ -12,7 +12,9 @@ export default function AdminProductForm() {
 
   async function handleSubmit(input: ProductInput) {
     if (id) {
-      await updateProduct(id, input);
+      // El stock no se edita desde acá: el servidor lo conserva y se ajusta desde Inventario.
+      const variants = input.variants.map(({ stock: _stock, ...variant }) => variant);
+      await updateProduct(id, { ...input, variants });
     } else {
       await createProduct(input);
     }

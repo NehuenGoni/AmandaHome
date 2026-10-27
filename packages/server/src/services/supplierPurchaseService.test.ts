@@ -1,8 +1,9 @@
 import { Types } from "mongoose";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { Category } from "../models/Category.js";
 import { Product } from "../models/Product.js";
 import { StockMovement } from "../models/StockMovement.js";
+import { SupplierPurchase } from "../models/SupplierPurchase.js";
 import { clearTestDB, closeTestDB, connectTestDB } from "../test/dbTestUtils.js";
 import * as supplierPurchaseService from "./supplierPurchaseService.js";
 
@@ -85,6 +86,26 @@ describe("createSupplierPurchase", () => {
     );
 
     expect(purchase.totalCost).toBe(20000 + 60000);
+  });
+
+  it("no deja nada a medias si falla el registro de movimientos", async () => {
+    const product = await createProduct(5);
+    const sku = product.variants[0]!.sku;
+    const spy = vi.spyOn(StockMovement, "insertMany").mockRejectedValueOnce(new Error("boom"));
+
+    await expect(
+      supplierPurchaseService.createSupplierPurchase(
+        {
+          supplierName: "Textiles del Sur",
+          items: [{ productId: product._id.toString(), variantSku: sku, quantity: 10, unitCost: 50000 }],
+        },
+        new Types.ObjectId().toString(),
+      ),
+    ).rejects.toThrow("boom");
+    spy.mockRestore();
+
+    expect(await SupplierPurchase.countDocuments()).toBe(0);
+    expect((await Product.findById(product._id))?.variants[0]?.stock).toBe(5);
   });
 
   it("rechaza si algún producto o variante no existe", async () => {

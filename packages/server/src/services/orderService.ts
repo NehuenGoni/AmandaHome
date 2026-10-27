@@ -1,6 +1,7 @@
 import type { OrderStatus, PaginatedResult } from "@amanda/shared";
 import { centsToPesos } from "@amanda/shared";
 import { Types, type FilterQuery } from "mongoose";
+import { runInTransaction } from "../config/db.js";
 import { decrementStock } from "./checkoutService.js";
 import { Order, type IOrder, type OrderDocument } from "../models/Order.js";
 import { User } from "../models/User.js";
@@ -109,28 +110,34 @@ export async function updateOrderStatus(
     throw new ForbiddenError(`No se puede pasar de "${order.status}" a "${input.status}"`);
   }
 
-  if (input.status === "cancelled") {
-    const items = order.items.map((item) => ({
-      product: item.product.toString(),
-      variantSku: item.variantSku,
-      quantity: item.quantity,
-    }));
-    await returnStock(items, {
-      reference: order._id.toString(),
-      note: input.note ?? "Pedido cancelado por un administrador",
-      createdBy: adminId,
-    });
-  }
+  await runInTransaction(async (session) => {
+    if (input.status === "cancelled") {
+      const items = order.items.map((item) => ({
+        product: item.product.toString(),
+        variantSku: item.variantSku,
+        quantity: item.quantity,
+      }));
+      await returnStock(
+        items,
+        {
+          reference: order._id.toString(),
+          note: input.note ?? "Pedido cancelado por un administrador",
+          createdBy: adminId,
+        },
+        session,
+      );
+    }
 
-  order.status = input.status;
-  if (input.trackingNumber) order.trackingNumber = input.trackingNumber;
-  order.statusHistory.push({
-    status: input.status,
-    changedAt: new Date(),
-    changedBy: new Types.ObjectId(adminId),
-    note: input.note,
+    order.status = input.status;
+    if (input.trackingNumber) order.trackingNumber = input.trackingNumber;
+    order.statusHistory.push({
+      status: input.status,
+      changedAt: new Date(),
+      changedBy: new Types.ObjectId(adminId),
+      note: input.note,
+    });
+    await order.save({ session });
   });
-  await order.save();
 
   const customer = await User.findById(order.customer);
   if (customer) {
@@ -249,31 +256,37 @@ export async function expireStalePendingOrders(now: Date = new Date()): Promise<
   for (const candidate of candidates) {
     // Actualización condicional: si otro proceso (el webhook) ya cambió el
     // estado, no se pisa esa confirmación ni se devuelve el stock dos veces.
-    const updated = await Order.findOneAndUpdate(
-      { _id: candidate._id, status: "pending" },
-      {
-        $set: { status: "cancelled" },
-        $push: {
-          statusHistory: {
-            status: "cancelled",
-            changedAt: now,
-            note: "Vencido: no se recibió el pago a tiempo",
+    // El cambio de estado y la reposición van en la misma transacción.
+    const expired = await runInTransaction(async (session) => {
+      const updated = await Order.findOneAndUpdate(
+        { _id: candidate._id, status: "pending" },
+        {
+          $set: { status: "cancelled" },
+          $push: {
+            statusHistory: {
+              status: "cancelled",
+              changedAt: now,
+              note: "Vencido: no se recibió el pago a tiempo",
+            },
           },
         },
-      },
-    );
-    if (!updated) continue;
+        { session },
+      );
+      if (!updated) return false;
 
-    const items = updated.items.map((item) => ({
-      product: item.product.toString(),
-      variantSku: item.variantSku,
-      quantity: item.quantity,
-    }));
-    await returnStock(items, {
-      reference: updated._id.toString(),
-      note: "Pedido vencido, stock repuesto",
+      const items = updated.items.map((item) => ({
+        product: item.product.toString(),
+        variantSku: item.variantSku,
+        quantity: item.quantity,
+      }));
+      await returnStock(
+        items,
+        { reference: updated._id.toString(), note: "Pedido vencido, stock repuesto" },
+        session,
+      );
+      return true;
     });
-    expiredCount++;
+    if (expired) expiredCount++;
   }
 
   return expiredCount;
@@ -295,23 +308,26 @@ export async function reactivateOrder(orderId: string, adminId: string): Promise
     variantSku: item.variantSku,
     quantity: item.quantity,
   }));
-  const stockChanges = await decrementStock(stockDecrements);
-  await recordMovements(stockChanges, {
-    type: "sale_out",
-    reference: order._id.toString(),
-    createdBy: adminId,
-  });
+  const paymentIssue = order.paymentIssue;
+  await runInTransaction(async (session) => {
+    const stockChanges = await decrementStock(stockDecrements, session);
+    await recordMovements(
+      stockChanges,
+      { type: "sale_out", reference: order._id.toString(), createdBy: adminId },
+      session,
+    );
 
-  order.status = "confirmed";
-  order.paymentIssue.resolvedAt = new Date();
-  order.paymentIssue.resolution = "reactivated";
-  order.statusHistory.push({
-    status: "confirmed",
-    changedAt: new Date(),
-    changedBy: new Types.ObjectId(adminId),
-    note: "Pedido reactivado por un administrador tras un pago aprobado sobre un pedido cancelado",
+    order.status = "confirmed";
+    paymentIssue.resolvedAt = new Date();
+    paymentIssue.resolution = "reactivated";
+    order.statusHistory.push({
+      status: "confirmed",
+      changedAt: new Date(),
+      changedBy: new Types.ObjectId(adminId),
+      note: "Pedido reactivado por un administrador tras un pago aprobado sobre un pedido cancelado",
+    });
+    await order.save({ session });
   });
-  await order.save();
 
   const customer = await User.findById(order.customer);
   if (customer) {

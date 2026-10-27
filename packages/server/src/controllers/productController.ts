@@ -41,7 +41,7 @@ export const adminGetProduct = asyncHandler(async (req: Request, res: Response) 
 
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as CreateProductInput;
-  const product = await productService.createProduct(input);
+  const product = await productService.createProduct(input, req.user!.id);
   res.status(201).json({ product });
 });
 
@@ -54,6 +54,12 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
 
 export const deleteProduct = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params as unknown as MongoIdParam;
-  await productService.deleteProduct(id);
+  await productService.archiveProduct(id);
   res.status(204).send();
+});
+
+export const restoreProduct = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as unknown as MongoIdParam;
+  const product = await productService.restoreProduct(id);
+  res.json({ product });
 });

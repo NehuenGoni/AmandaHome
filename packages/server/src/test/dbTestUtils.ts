@@ -1,11 +1,13 @@
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose from "mongoose";
 
-let mongoServer: MongoMemoryServer | undefined;
+let mongoServer: MongoMemoryReplSet | undefined;
 
-/** Levanta un Mongo en memoria y conecta Mongoose. Sin soporte de transacciones multi-doc. */
+/** Levanta un replica set en memoria (necesario para transacciones) y conecta Mongoose. */
 export async function connectTestDB(): Promise<void> {
-  mongoServer = await MongoMemoryServer.create();
+  mongoServer = await MongoMemoryReplSet.create({
+    replSet: { count: 1, storageEngine: "wiredTiger" },
+  });
   await mongoose.connect(mongoServer.getUri());
   // Los índices (incluidos los `unique`) se construyen en background; sin
   // esto, dos inserts seguidos en el mismo test pueden no chocar todavía.

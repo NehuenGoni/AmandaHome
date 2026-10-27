@@ -1,4 +1,4 @@
-import type { PaginatedResult, Product } from "@amanda/shared";
+import type { PaginatedResult, PublicProduct } from "@amanda/shared";
 import { apiGet } from "./apiClient.js";
 
 export interface ListProductsParams {
@@ -20,6 +20,6 @@ function buildQuery(params: Record<string, unknown>): string {
 }
 
 export const listProducts = (params: ListProductsParams = {}) =>
-  apiGet<PaginatedResult<Product>>(`/products${buildQuery(params as Record<string, unknown>)}`);
+  apiGet<PaginatedResult<PublicProduct>>(`/products${buildQuery(params as Record<string, unknown>)}`);
 
-export const getProductBySlug = (slug: string) => apiGet<{ product: Product }>(`/products/${slug}`);
+export const getProductBySlug = (slug: string) => apiGet<{ product: PublicProduct }>(`/products/${slug}`);
