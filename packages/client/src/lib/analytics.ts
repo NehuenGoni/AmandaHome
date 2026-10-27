@@ -40,8 +40,10 @@ export function initAnalytics(): void {
   initialized = true;
 
   window.dataLayer = window.dataLayer ?? [];
-  window.gtag = function gtag(...args: unknown[]) {
-    window.dataLayer?.push(args);
+  // gtag.js solo procesa objetos `arguments`: empujar un array (rest params) se ignora en silencio.
+  window.gtag = function gtag() {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer?.push(arguments);
   };
   window.gtag("js", new Date());
   // Los page_view los manda RouteTracker (la SPA no recarga al navegar).

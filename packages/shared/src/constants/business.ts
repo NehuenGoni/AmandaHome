@@ -10,7 +10,7 @@ export const BUSINESS = {
   streetAddress: "Av. El Callao 1585",
   locality: "Grand Bourg",
   region: "Buenos Aires",
-  postalCode: "B1615",
+  postalCode: "B1615DDE",
   countryCode: "AR",
   /** Coordenadas aproximadas de Grand Bourg: ajustar con las exactas de la ficha de Google Maps. */
   geo: { latitude: -34.4906, longitude: -58.7239 },
