@@ -1,7 +1,7 @@
 import type { PublicShippingSettings, ShippingOption } from "@amanda/shared";
 import { formatMoney } from "@amanda/shared";
 import { Loader2, Plus } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { AddressForm } from "@/components/account/AddressForm";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +10,7 @@ import { InlineMessage } from "@/components/ui/InlineMessage";
 import { PriceTag } from "@/components/ui/PriceTag";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
+import { trackBeginCheckout } from "@/lib/analytics";
 import { ApiError } from "@/lib/apiClient";
 import { createCheckout } from "@/lib/checkoutApi";
 import { getShippingSettings, quoteShipping } from "@/lib/shippingApi";
@@ -61,6 +62,23 @@ export default function Checkout() {
     if (cart.items.length === 0) return;
     fetchQuote(addressId || undefined);
   }, [addressId, cart.items.length, fetchQuote]);
+
+  // Una sola vez por visita al checkout, no cada vez que cambia el envío o la dirección.
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current || cart.items.length === 0) return;
+    checkoutTracked.current = true;
+    trackBeginCheckout(
+      cart.subtotal,
+      cart.items.map((item) => ({
+        item_id: item.variantSku,
+        item_name: item.name,
+        item_variant: item.attributeValue,
+        price: item.unitPrice / 100,
+        quantity: item.quantity,
+      })),
+    );
+  }, [cart]);
 
   if (cart.items.length === 0) return <Navigate to="/carrito" replace />;
 

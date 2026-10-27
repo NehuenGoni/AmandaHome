@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+# Zonas privadas o sin valor para buscadores. Login/registro no se bloquean acá:
+# llevan noindex y Google necesita poder leerlo.
+Disallow: /admin
+Disallow: /cuenta
+Disallow: /checkout
+Disallow: /carrito
+Disallow: /order-confirmation
+
+# Reemplazar por el dominio real al publicar (el mismo de VITE_SITE_URL).
+Sitemap: https://homedecoamanda.com/sitemap.xml

@@ -43,6 +43,13 @@ export default function Privacidad() {
           Usamos una cookie técnica para mantener tu sesión iniciada y almacenamiento local para recordar preferencias
           como el tema claro u oscuro. No usamos cookies publicitarias.
         </p>
+        <p>
+          Medimos el uso del sitio con Google Analytics 4 (Google LLC), que utiliza cookies propias para generar
+          estadísticas agregadas: páginas visitadas, productos vistos y compras realizadas. Con esa información
+          mejoramos el catálogo y entendemos cómo nos encuentran. No incluimos tu nombre ni tu email en esos datos y
+          podés bloquear estas cookies desde la configuración de tu navegador o con el complemento de inhabilitación
+          de Google Analytics.
+        </p>
       </LegalSection>
       <LegalSection title="Conservación y seguridad">
         <p>

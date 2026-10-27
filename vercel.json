@@ -2,5 +2,10 @@
   "buildCommand": "npm run build:client",
   "installCommand": "npm ci",
   "outputDirectory": "packages/client/dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/sitemap.xml", "destination": "https://amanda-server.fly.dev/api/seo/sitemap.xml" },
+    { "source": "/productos/:slug", "destination": "/api/og?type=product&slug=:slug" },
+    { "source": "/categoria/:slug", "destination": "/api/og?type=category&slug=:slug" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

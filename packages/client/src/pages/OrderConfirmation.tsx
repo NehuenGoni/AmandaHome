@@ -7,6 +7,7 @@ import { PayNowButton } from "@/components/orders/PayNowButton";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { useMyOrder } from "@/hooks/useMyOrder";
+import { trackPurchase } from "@/lib/analytics";
 import { getMyOrder } from "@/lib/ordersApi";
 import NotFound from "./NotFound";
 
@@ -40,6 +41,24 @@ export default function OrderConfirmation() {
 
     return () => clearTimeout(timeout);
   }, [id, liveOrder]);
+
+  // Solo cuando el pago está aprobado; trackPurchase deduplica por pedido si se recarga la página.
+  useEffect(() => {
+    if (!liveOrder || liveOrder.paymentStatus !== "approved") return;
+    trackPurchase({
+      orderId: liveOrder._id,
+      orderNumber: liveOrder.orderNumber,
+      totalCents: liveOrder.total,
+      shippingCents: liveOrder.shippingCost,
+      items: liveOrder.items.map((item) => ({
+        item_id: item.variantSku,
+        item_name: item.productName,
+        item_variant: item.attributeValue,
+        price: item.unitPrice / 100,
+        quantity: item.quantity,
+      })),
+    });
+  }, [liveOrder]);
 
   if (isLoading) return <Spinner label="Buscando tu pedido…" />;
   if (error || !liveOrder) return <NotFound />;

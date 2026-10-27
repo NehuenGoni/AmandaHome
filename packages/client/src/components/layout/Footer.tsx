@@ -1,6 +1,7 @@
 import { BUSINESS } from "@amanda/shared";
 import { Instagram } from "lucide-react";
 import { Link } from "react-router-dom";
+import { trackContactClick } from "@/lib/analytics";
 import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
 import { Logo } from "./Logo";
 
@@ -17,6 +18,7 @@ export function Footer() {
             <div className="flex items-center gap-3 text-text-muted">
               <a
                 href={BUSINESS.instagramUrl}
+                onClick={() => trackContactClick("instagram", "footer")}
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Instagram de Amanda Home & Deco"
@@ -26,6 +28,7 @@ export function Footer() {
               </a>
               <a
                 href={BUSINESS.whatsappUrl}
+                onClick={() => trackContactClick("whatsapp", "footer")}
                 target="_blank"
                 rel="noreferrer"
                 aria-label="WhatsApp de Amanda Home & Deco"

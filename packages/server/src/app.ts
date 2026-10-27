@@ -20,6 +20,7 @@ import { checkoutWebhookRouter } from "./routes/checkoutWebhookRoutes.js";
 import { inventoryRouter } from "./routes/inventoryRoutes.js";
 import { orderRouter } from "./routes/orderRoutes.js";
 import { productRouter } from "./routes/productRoutes.js";
+import { seoRouter } from "./routes/seoRoutes.js";
 import { adminShippingRouter } from "./routes/adminShippingRoutes.js";
 import { shippingRouter } from "./routes/shippingRoutes.js";
 import { supplierPurchaseRouter } from "./routes/supplierPurchaseRoutes.js";
@@ -55,6 +56,7 @@ export function createApp() {
   app.use("/api/admin", adminRouter);
   app.use("/api/admin/categories", adminCategoryRouter);
   app.use("/api/categories", categoryRouter);
+  app.use("/api/seo", seoRouter);
   app.use("/api/admin/products", adminProductRouter);
   app.use("/api/products", productRouter);
   app.use("/api/uploads", uploadRouter);

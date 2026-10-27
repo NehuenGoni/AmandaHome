@@ -1,20 +1,27 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ImageOff, ShoppingBag } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { Seo, truncateDescription } from "@/components/seo/Seo";
 import { InlineMessage } from "@/components/ui/InlineMessage";
 import { PriceTag } from "@/components/ui/PriceTag";
 import { QuantityStepper } from "@/components/ui/QuantityStepper";
 import { Spinner } from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
 import { useCart } from "@/contexts/CartContext";
+import { useCategories } from "@/hooks/useCategories";
 import { useProduct } from "@/hooks/useProduct";
+import { trackAddToCart, trackViewItem } from "@/lib/analytics";
+import { cloudinaryUrl } from "@/lib/cloudinaryUrl";
+import { buildProductJsonLd } from "@/lib/structuredData";
 import NotFound from "./NotFound";
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
   const { product, isLoading, error } = useProduct(slug);
   const { addItem } = useCart();
+  const { categories } = useCategories();
 
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -26,10 +33,15 @@ export default function ProductDetail() {
     return product.variants.find((v) => v.sku === selectedSku) ?? product.variants[0] ?? null;
   }, [product, selectedSku]);
 
+  useEffect(() => {
+    if (product) trackViewItem(product, product.variants[0] ?? null);
+  }, [product]);
+
   if (isLoading) return <Spinner label="Cargando producto…" />;
   if (error || !product) return <NotFound />;
 
   const image = product.images[selectedImage];
+  const category = categories.find((c) => c._id === product.category);
 
   async function handleAddToCart() {
     if (!product || !variant) return;
@@ -45,19 +57,38 @@ export default function ProductDetail() {
       unitPrice: variant.price,
       availableStock: variant.stock,
     });
+    trackAddToCart(product, variant, quantity);
     setConfirmation(true);
     setTimeout(() => setConfirmation(false), 2500);
   }
 
   return (
     <div className="grid gap-10 md:grid-cols-2">
+      <Seo
+        title={product.name}
+        description={
+          truncateDescription(product.description) ??
+          `Comprá ${product.name} en Amanda Home & Deco. Envíos a todo el país y retiro en el local de Grand Bourg.`
+        }
+        path={`/productos/${product.slug}`}
+        image={product.images[0] ? cloudinaryUrl(product.images[0].url, { width: 1200 }) : undefined}
+        type="product"
+        jsonLd={buildProductJsonLd(product, category)}
+      />
       <div className="flex flex-col gap-3">
         <motion.div
           layoutId={`product-image-${product._id}`}
           className="aspect-square overflow-hidden rounded-2xl bg-surface-alt"
         >
           {image ? (
-            <img src={image.url} alt={image.alt ?? product.name} className="size-full object-cover" />
+            <img
+              src={cloudinaryUrl(image.url, { width: 1200 })}
+              alt={image.alt ?? product.name}
+              width={1200}
+              height={1200}
+              fetchPriority="high"
+              className="size-full object-cover"
+            />
           ) : (
             <div className="flex size-full items-center justify-center text-text-muted">
               <ImageOff className="size-10" />
@@ -75,7 +106,12 @@ export default function ProductDetail() {
                   index === selectedImage ? "border-accent" : "border-transparent"
                 }`}
               >
-                <img src={img.url} alt="" className="size-full object-cover" />
+                <img
+                  src={cloudinaryUrl(img.url, { width: 160 })}
+                  alt={img.alt ?? `${product.name} - vista ${index + 1}`}
+                  loading="lazy"
+                  className="size-full object-cover"
+                />
               </button>
             ))}
           </div>

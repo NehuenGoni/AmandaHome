@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ImageOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PriceTag } from "@/components/ui/PriceTag";
+import { cloudinaryUrl } from "@/lib/cloudinaryUrl";
 import { getMinPrice, getTotalStock, hasPriceRange } from "@/lib/productPricing";
 
 export function ProductCard({ product }: { product: PublicProduct }) {
@@ -18,8 +19,10 @@ export function ProductCard({ product }: { product: PublicProduct }) {
         <div className="relative aspect-square overflow-hidden bg-surface-alt">
           {image ? (
             <img
-              src={image.url}
+              src={cloudinaryUrl(image.url, { width: 600 })}
               alt={image.alt ?? product.name}
+              width={600}
+              height={600}
               loading="lazy"
               className="size-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
             />

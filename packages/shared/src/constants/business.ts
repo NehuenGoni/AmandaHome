@@ -4,9 +4,22 @@
  */
 export const BUSINESS = {
   name: "Amanda Home & Deco",
-  legalName: "COMPLETAR",
-  cuit: "COMPLETAR",
-  address: "COMPLETAR",
+  legalName: "Salinas Nancy Antonia",
+  cuit: "27-22052821-4",
+  address: "Av. El Callao 1585, Grand Bourg",
+  streetAddress: "Av. El Callao 1585",
+  locality: "Grand Bourg",
+  region: "Buenos Aires",
+  postalCode: "B1615",
+  countryCode: "AR",
+  /** Coordenadas aproximadas de Grand Bourg: ajustar con las exactas de la ficha de Google Maps. */
+  geo: { latitude: -34.4906, longitude: -58.7239 },
+  /** Formato schema.org: días + rango horario (dos turnos). */
+  openingHours: [
+    { days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "09:30", closes: "13:00" },
+    { days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "16:30", closes: "20:00" },
+  ],
+  mapsUrl: "https://www.google.com/maps/search/?api=1&query=Av.+El+Callao+1585,+Grand+Bourg,+Buenos+Aires",
   city: "Buenos Aires, Argentina",
   phone: "11 3758-2353",
   whatsappNumber: "5491137582353",

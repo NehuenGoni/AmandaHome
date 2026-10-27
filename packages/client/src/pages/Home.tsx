@@ -1,25 +1,43 @@
 import { BUSINESS } from "@amanda/shared";
 import { motion } from "framer-motion";
 import { ArrowRight, Clock, MapPin } from "lucide-react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { Seo } from "@/components/seo/Seo";
 import { Button } from "@/components/ui/Button";
 import { ProductGrid } from "@/components/catalog/ProductGrid";
 import { Spinner } from "@/components/ui/Spinner";
 import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
 import { useCategories } from "@/hooks/useCategories";
 import { useProducts } from "@/hooks/useProducts";
+import { trackContactClick, trackViewItemList } from "@/lib/analytics";
+import { buildLocalBusinessJsonLd, buildWebSiteJsonLd } from "@/lib/structuredData";
 
 export default function Home() {
   const { data, isLoading } = useProducts({ isFeatured: true, limit: 8 });
   const { categories } = useCategories();
 
+  useEffect(() => {
+    if (data?.items.length) trackViewItemList("Destacados", data.items);
+  }, [data]);
+
   return (
     <div className="flex flex-col gap-16">
+      <Seo
+        title="Decoración, textiles y cerámica en Grand Bourg"
+        rawTitle
+        description="Amanda Home & Deco: textiles, cerámica y objetos de decoración para tu casa. Comprá online o visitá el local en Av. El Callao 1585, Grand Bourg."
+        path="/"
+        jsonLd={[buildLocalBusinessJsonLd(), buildWebSiteJsonLd()]}
+      />
       <section className="relative isolate flex min-h-[28rem] items-end overflow-hidden rounded-3xl px-6 py-12 sm:min-h-[32rem] sm:px-12 md:items-center">
         {/* Foto del local como fondo; el texto va siempre en crema sobre el velo oscuro, en ambos temas. */}
         <motion.img
           src="/local-estanterias.jpeg"
-          alt=""
+          alt="Estanterías del local Amanda Home & Deco con textiles y cerámica"
+          width={1200}
+          height={1600}
+          fetchPriority="high"
           initial={{ scale: 1.06 }}
           animate={{ scale: 1 }}
           transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
@@ -58,7 +76,7 @@ export default function Home() {
             {categories.slice(0, 8).map((category) => (
               <Link
                 key={category._id}
-                to={`/catalogo?categoria=${category.slug}`}
+                to={`/categoria/${category.slug}`}
                 className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-text transition-colors hover:border-accent hover:text-accent-deep"
               >
                 {category.name}
@@ -81,7 +99,7 @@ export default function Home() {
       <section className="relative isolate overflow-hidden rounded-3xl px-6 py-14 sm:px-12 sm:py-20">
         <img
           src="/local-mostrador.jpeg"
-          alt=""
+          alt="Mostrador del local Amanda Home & Deco en Grand Bourg"
           loading="lazy"
           className="absolute inset-0 -z-20 size-full object-cover object-[25%_35%]"
         />
@@ -101,8 +119,10 @@ export default function Home() {
             <div className="flex gap-3">
               <MapPin className="mt-0.5 size-5 shrink-0 text-[#c69a3b]" />
               <div>
-                <p className="font-medium">Av. El Callao 1585</p>
-                <p className="text-[#f5f0e4]/75">Grand Bourg, Buenos Aires</p>
+                <p className="font-medium">{BUSINESS.streetAddress}</p>
+                <p className="text-[#f5f0e4]/75">
+                  {BUSINESS.locality}, {BUSINESS.region}
+                </p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -115,7 +135,8 @@ export default function Home() {
           </div>
           <div className="flex flex-wrap gap-3">
             <a
-              href="https://www.google.com/maps/search/?api=1&query=Av.+El+Callao+1585,+Grand+Bourg,+Buenos+Aires"
+              href={BUSINESS.mapsUrl}
+              onClick={() => trackContactClick("maps", "home-visitanos")}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-full bg-[#c69a3b] px-6 py-3 text-sm font-medium text-[#211e1a] transition-colors hover:bg-[#d6ab4d]"
@@ -124,6 +145,7 @@ export default function Home() {
             </a>
             <a
               href={BUSINESS.whatsappUrl}
+              onClick={() => trackContactClick("whatsapp", "home-visitanos")}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-full border border-[#f5f0e4]/40 px-6 py-3 text-sm font-medium text-[#f5f0e4] backdrop-blur-sm transition-colors hover:bg-[#f5f0e4]/10"

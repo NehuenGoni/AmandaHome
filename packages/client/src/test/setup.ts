@@ -14,3 +14,14 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: () => false,
   }),
 });
+
+// jsdom no implementa IntersectionObserver; framer-motion lo usa en las animaciones `whileInView` de la home.
+class IntersectionObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+Object.defineProperty(window, "IntersectionObserver", { writable: true, value: IntersectionObserverStub });
