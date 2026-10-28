@@ -12,8 +12,8 @@ export const BUSINESS = {
   region: "Buenos Aires",
   postalCode: "B1615DDE",
   countryCode: "AR",
-  /** Coordenadas aproximadas de Grand Bourg: ajustar con las exactas de la ficha de Google Maps. */
-  geo: { latitude: -34.4906, longitude: -58.7239 },
+  /** Coordenadas exactas del local (Google Maps). */
+  geo: { latitude: -34.485527512578194, longitude: -58.72727942505754 },
   /** Formato schema.org: días + rango horario (dos turnos). */
   openingHours: [
     { days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "09:30", closes: "13:00" },
