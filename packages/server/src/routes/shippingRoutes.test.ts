@@ -66,3 +66,39 @@ describe("/api/admin/shipping/settings", () => {
     expect(putRes.body.settings.freeShippingThreshold).toBe(1000000);
   });
 });
+
+describe("GET /api/shipping/agencies", () => {
+  it("rechaza sin autenticación", async () => {
+    const res = await request(app).get("/api/shipping/agencies?provinceCode=B");
+    expect(res.status).toBe(401);
+  });
+
+  it("rechaza un código de provincia inválido", async () => {
+    const { token } = await createUser("customer");
+    const res = await request(app)
+      .get("/api/shipping/agencies?provinceCode=I")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("lista las sucursales de la provincia (correo simulado)", async () => {
+    const { token } = await createUser("customer");
+    const res = await request(app)
+      .get("/api/shipping/agencies?provinceCode=X")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.agencies.length).toBeGreaterThan(0);
+    expect(res.body.agencies[0]).toMatchObject({ provinceCode: "X", code: expect.stringMatching(/^X/) });
+  });
+});
+
+describe("POST /api/shipping/quote", () => {
+  it("exige la provincia si se elige una sucursal", async () => {
+    const { token } = await createUser("customer");
+    const res = await request(app)
+      .post("/api/shipping/quote")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ agencyCode: "B0001" });
+    expect(res.status).toBe(400);
+  });
+});

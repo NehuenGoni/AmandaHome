@@ -22,6 +22,7 @@ export async function updateShippingSettings(
 
   if (input.pickup) Object.assign(settings.pickup, input.pickup);
   if (input.home) Object.assign(settings.home, input.home);
+  if (input.branch) Object.assign(settings.branch, input.branch);
   if (input.originPostalCode !== undefined) settings.originPostalCode = input.originPostalCode;
   if (input.defaultPackage) Object.assign(settings.defaultPackage, input.defaultPackage);
   if ("freeShippingThreshold" in input) {
@@ -41,6 +42,7 @@ export function toPublicShippingSettings(settings: ShippingSettingsDocument): Pu
       instructions: settings.pickup.instructions,
     },
     homeEnabled: settings.home.enabled,
+    branchEnabled: settings.branch.enabled,
     freeShippingThreshold: settings.freeShippingThreshold,
   };
 }

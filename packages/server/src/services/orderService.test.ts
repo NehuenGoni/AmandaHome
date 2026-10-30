@@ -411,3 +411,115 @@ describe("refundOrderPayment", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("importOrderToCarrier", () => {
+  async function createCustomer() {
+    return User.create({
+      email: `cliente-${Math.random()}@example.com`,
+      password: "supersecreto123",
+      firstName: "Ana",
+      lastName: "Pérez",
+      phone: "1166667777",
+    });
+  }
+
+  const branchOrder = {
+    status: "confirmed",
+    shippingMethod: "branch",
+    shippingAddress: undefined,
+    shippingDetails: {
+      carrier: "correo_argentino",
+      service: "EP",
+      quotedAt: new Date(),
+      agency: { code: "B0107", name: "Monte Grande", address: "Vicente Lopez 448", postalCode: "1842", provinceCode: "B" },
+      packageWeight: 1000,
+      packageHeight: 20,
+      packageWidth: 20,
+      packageLength: 30,
+    },
+  };
+
+  it("carga un pedido a sucursal con el paquete cotizado y el teléfono del cliente", async () => {
+    const { shippingCarrier } = await import("./shipping/index.js");
+    const importSpy = vi.spyOn(shippingCarrier, "importShipment");
+    const customer = await createCustomer();
+    const { order } = await createOrderFor(customer._id, branchOrder);
+
+    const updated = await orderService.importOrderToCarrier(order.id);
+
+    expect(updated.shippingDetails?.carrierImportedAt).toBeInstanceOf(Date);
+    expect(importSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientName: "Ana Pérez",
+        recipientPhone: "1166667777",
+        declaredValue: 5000,
+        package: { weight: 1000, height: 20, width: 20, length: 30 },
+      }),
+    );
+    importSpy.mockRestore();
+  });
+
+  it("guarda el motivo si el correo rechaza el envío y lo limpia al reintentar bien", async () => {
+    const { shippingCarrier } = await import("./shipping/index.js");
+    const importSpy = vi
+      .spyOn(shippingCarrier, "importShipment")
+      .mockRejectedValueOnce(new Error("Correo Argentino rechazó el envío: Verifique la sucursal de destino"));
+    const customer = await createCustomer();
+    const { order } = await createOrderFor(customer._id, branchOrder);
+
+    await expect(orderService.importOrderToCarrier(order.id)).rejects.toThrow("Verifique la sucursal");
+    const failed = await Order.findById(order.id);
+    expect(failed?.shippingDetails?.carrierImportError).toContain("Verifique la sucursal");
+    expect(failed?.shippingDetails?.carrierImportedAt).toBeUndefined();
+
+    const retried = await orderService.importOrderToCarrier(order.id);
+    expect(retried.shippingDetails?.carrierImportedAt).toBeInstanceOf(Date);
+    expect(retried.shippingDetails?.carrierImportError).toBeUndefined();
+    importSpy.mockRestore();
+  });
+
+  it("a mano rechaza un retiro en el local; en modo automático lo saltea sin error", async () => {
+    const customer = await createCustomer();
+    const { order } = await createOrderFor(customer._id, { status: "confirmed" });
+
+    await expect(orderService.importOrderToCarrier(order.id)).rejects.toThrow("no se despacha por correo");
+    const skipped = await orderService.importOrderToCarrier(order.id, { auto: true });
+    expect(skipped.shippingDetails?.carrierImportedAt).toBeUndefined();
+  });
+
+  it("en modo automático no vuelve a cargar un envío ya cargado", async () => {
+    const { shippingCarrier } = await import("./shipping/index.js");
+    const importSpy = vi.spyOn(shippingCarrier, "importShipment");
+    const customer = await createCustomer();
+    const { order } = await createOrderFor(customer._id, {
+      ...branchOrder,
+      shippingDetails: { ...branchOrder.shippingDetails, carrierImportedAt: new Date() },
+    });
+
+    await orderService.importOrderToCarrier(order.id, { auto: true });
+    expect(importSpy).not.toHaveBeenCalled();
+    importSpy.mockRestore();
+  });
+});
+
+describe("getMyOrderTracking", () => {
+  it("devuelve los eventos del correo si el pedido tiene número de seguimiento", async () => {
+    const customerId = new Types.ObjectId();
+    const { order } = await createOrderFor(customerId, { shippingMethod: "home", trackingNumber: "TN123" });
+
+    const events = await orderService.getMyOrderTracking(customerId.toString(), order.id);
+    expect(events.length).toBeGreaterThan(0);
+    expect(events[0]).toHaveProperty("event");
+  });
+
+  it("devuelve una lista vacía sin número de seguimiento", async () => {
+    const customerId = new Types.ObjectId();
+    const { order } = await createOrderFor(customerId, { shippingMethod: "home" });
+    expect(await orderService.getMyOrderTracking(customerId.toString(), order.id)).toEqual([]);
+  });
+
+  it("no deja ver el seguimiento de un pedido ajeno", async () => {
+    const { order } = await createOrderFor(new Types.ObjectId(), { shippingMethod: "home", trackingNumber: "TN123" });
+    await expect(orderService.getMyOrderTracking(new Types.ObjectId().toString(), order.id)).rejects.toThrow();
+  });
+});

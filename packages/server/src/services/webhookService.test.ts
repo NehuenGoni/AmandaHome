@@ -11,6 +11,9 @@ vi.mock("mercadopago", () => ({
   MerchantOrder: vi.fn().mockImplementation(() => ({ get: mockMerchantOrderGet })),
 }));
 
+const mockImportOrderToCarrier = vi.fn().mockResolvedValue(undefined);
+vi.mock("./orderService.js", () => ({ importOrderToCarrier: mockImportOrderToCarrier }));
+
 const { handleMerchantOrderWebhook, handlePaymentWebhook } = await import("./webhookService.js");
 const { Category } = await import("../models/Category.js");
 const { Order } = await import("../models/Order.js");
@@ -241,5 +244,39 @@ describe("handleMerchantOrderWebhook", () => {
   it("nunca lanza aunque la consulta a Mercado Pago falle", async () => {
     mockMerchantOrderGet.mockRejectedValue(new Error("timeout"));
     await expect(handleMerchantOrderWebhook("999")).resolves.toBeUndefined();
+  });
+});
+
+describe("handlePaymentWebhook → carga en el correo", () => {
+  it("carga el envío en el correo automáticamente al aprobarse el pago", async () => {
+    const { order } = await createOrderWithProduct();
+    mockPaymentGet.mockResolvedValue({ id: "pay-1", status: "approved", external_reference: order._id.toString() });
+
+    await handlePaymentWebhook("pay-1");
+
+    expect(mockImportOrderToCarrier).toHaveBeenCalledWith(order.id, { auto: true });
+  });
+
+  it("no carga el envío si el pago no fue aprobado", async () => {
+    const { order } = await createOrderWithProduct();
+    mockPaymentGet.mockResolvedValue({ id: "pay-1", status: "rejected", external_reference: order._id.toString() });
+
+    await handlePaymentWebhook("pay-1");
+
+    expect(mockImportOrderToCarrier).not.toHaveBeenCalled();
+  });
+
+  it("un error del correo no impide confirmar el pedido", async () => {
+    mockImportOrderToCarrier.mockRejectedValueOnce(new Error("Correo caído"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { order } = await createOrderWithProduct();
+    mockPaymentGet.mockResolvedValue({ id: "pay-1", status: "approved", external_reference: order._id.toString() });
+
+    await handlePaymentWebhook("pay-1");
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect((await Order.findById(order._id))?.status).toBe("confirmed");
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("no se pudo cargar el pedido"), expect.any(Error));
+    errorSpy.mockRestore();
   });
 });

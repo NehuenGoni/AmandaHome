@@ -55,14 +55,28 @@ export interface IShippingAddressSnapshot {
   phone?: string;
 }
 
+/** Sucursal de Correo elegida para retirar (snapshot: la lista de MiCorreo puede cambiar). */
+export interface IOrderShippingAgency {
+  code: string;
+  name: string;
+  address: string;
+  postalCode: string;
+  provinceCode: string;
+}
+
 /** Detalle de la cotización de envío por correo (Correo Argentino), guardado al confirmar la orden. */
 export interface IOrderShippingDetails {
   carrier: string;
+  /** "CP" (Clásico) o "EP" (Expreso). Ausente en pedidos viejos: se tratan como Clásico. */
   service?: string;
+  /** Solo si `shippingMethod` es "branch". */
+  agency?: IOrderShippingAgency;
   etaMinDays?: number;
   etaMaxDays?: number;
   quotedAt: Date;
   carrierImportedAt?: Date;
+  /** Último error al cargar el envío en MiCorreo; se limpia cuando la carga sale bien. */
+  carrierImportError?: string;
   isFallback?: boolean;
   packageWeight?: number;
   packageHeight?: number;
@@ -128,14 +142,27 @@ const shippingAddressSnapshotSchema = new Schema<IShippingAddressSnapshot>(
   { _id: false },
 );
 
+const shippingAgencySchema = new Schema<IOrderShippingAgency>(
+  {
+    code: { type: String, required: true },
+    name: { type: String, required: true },
+    address: { type: String, required: true },
+    postalCode: { type: String, required: true },
+    provinceCode: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const shippingDetailsSchema = new Schema<IOrderShippingDetails>(
   {
     carrier: { type: String, required: true },
     service: { type: String },
+    agency: { type: shippingAgencySchema },
     etaMinDays: { type: Number },
     etaMaxDays: { type: Number },
     quotedAt: { type: Date, required: true, default: () => new Date() },
     carrierImportedAt: { type: Date },
+    carrierImportError: { type: String },
     isFallback: { type: Boolean },
     packageWeight: { type: Number },
     packageHeight: { type: Number },

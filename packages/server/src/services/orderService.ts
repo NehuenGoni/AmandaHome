@@ -1,5 +1,5 @@
-import type { OrderStatus, PaginatedResult } from "@amanda/shared";
-import { centsToPesos } from "@amanda/shared";
+import type { OrderStatus, PaginatedResult, ShippingTrackingEvent } from "@amanda/shared";
+import { centsToPesos, isCarrierShippingMethod } from "@amanda/shared";
 import { Types, type FilterQuery } from "mongoose";
 import { runInTransaction } from "../config/db.js";
 import { decrementStock } from "./checkoutService.js";
@@ -10,7 +10,7 @@ import { sendOrderConfirmationEmail, sendOrderStatusChangeEmail } from "./email/
 import { recordMovements, returnStock } from "./inventoryService.js";
 import { createPaymentPreference, getPaymentDeadline, refundPayment } from "./paymentService.js";
 import { shippingCarrier } from "./shipping/index.js";
-import { getPackageForItems } from "./shippingService.js";
+import { estimatePackage } from "./shippingService.js";
 import type {
   AdminListOrdersQuery,
   AttachReceiptInput,
@@ -147,22 +147,40 @@ export async function updateOrderStatus(
   return order;
 }
 
+function setCarrierImportFields(
+  order: OrderDocument,
+  fields: Pick<NonNullable<IOrder["shippingDetails"]>, "carrierImportedAt" | "carrierImportError">,
+): void {
+  // Pedidos viejos pueden no tener `shippingDetails` (se creaban solo al cotizar).
+  order.shippingDetails ??= { carrier: "correo_argentino", quotedAt: new Date() };
+  order.shippingDetails.carrierImportedAt = fields.carrierImportedAt;
+  order.shippingDetails.carrierImportError = fields.carrierImportError;
+}
+
 /**
  * Carga el envío en Correo Argentino (MiCorreo) para que el admin pueda
- * imprimir la etiqueta desde su web. No genera número de seguimiento: eso
- * se sigue cargando a mano al pasar el pedido a "Enviado", como hoy.
+ * imprimir la etiqueta desde su web. Se dispara solo al aprobarse el pago
+ * (`auto: true`, que no falla si no corresponde cargarlo) y el admin puede
+ * reintentarlo a mano si falló. Si el correo lo rechaza, el motivo queda en
+ * `shippingDetails.carrierImportError`. No genera número de seguimiento: eso
+ * se sigue cargando a mano al pasar el pedido a "Enviado".
  */
-export async function importOrderToCarrier(orderId: string): Promise<OrderDocument> {
+export async function importOrderToCarrier(
+  orderId: string,
+  { auto = false }: { auto?: boolean } = {},
+): Promise<OrderDocument> {
   const order = await getAdminOrderById(orderId);
 
-  if (order.shippingMethod !== "home") {
-    throw new BadRequestError("Este pedido no tiene envío a domicilio");
-  }
-  if (order.paymentStatus !== "approved") {
-    throw new BadRequestError("El pedido todavía no tiene el pago aprobado");
-  }
-  if (order.shippingDetails?.carrierImportedAt) {
-    throw new BadRequestError("Este envío ya fue cargado en el correo");
+  const skipReason = !isCarrierShippingMethod(order.shippingMethod)
+    ? "Este pedido no se despacha por correo"
+    : order.paymentStatus !== "approved"
+      ? "El pedido todavía no tiene el pago aprobado"
+      : order.shippingDetails?.carrierImportedAt
+        ? "Este envío ya fue cargado en el correo"
+        : undefined;
+  if (skipReason) {
+    if (auto) return order;
+    throw new BadRequestError(skipReason);
   }
 
   const customer = await User.findById(order.customer);
@@ -178,27 +196,42 @@ export async function importOrderToCarrier(orderId: string): Promise<OrderDocume
           length: details.packageLength,
         }
       : // Pedidos viejos, creados antes de guardar el paquete usado: se recalcula con el paquete por defecto actual.
-        await getPackageForItems(
-          order.items.map((item) => ({ quantity: item.quantity })),
-        );
+        await estimatePackage(order.items.map((item) => ({ quantity: item.quantity })));
 
-  await shippingCarrier.importShipment({
-    order,
-    recipientName: `${customer.firstName} ${customer.lastName}`.trim(),
-    recipientEmail: customer.email,
-    declaredValue: centsToPesos(order.subtotal),
-    package: shippingPackage,
-  });
+  try {
+    await shippingCarrier.importShipment({
+      order,
+      recipientName: `${customer.firstName} ${customer.lastName}`.trim(),
+      recipientEmail: customer.email,
+      recipientPhone: order.shippingAddress?.phone ?? customer.phone,
+      declaredValue: centsToPesos(order.subtotal),
+      package: shippingPackage,
+    });
+  } catch (err) {
+    setCarrierImportFields(order, {
+      carrierImportError: err instanceof Error ? err.message : "Error desconocido al cargar el envío",
+    });
+    await order.save();
+    throw err;
+  }
 
-  order.shippingDetails = {
-    ...order.shippingDetails,
-    carrier: order.shippingDetails?.carrier ?? "correo_argentino",
-    quotedAt: order.shippingDetails?.quotedAt ?? new Date(),
-    carrierImportedAt: new Date(),
-  };
+  setCarrierImportFields(order, { carrierImportedAt: new Date(), carrierImportError: undefined });
   await order.save();
 
   return order;
+}
+
+async function trackOrder(order: OrderDocument): Promise<ShippingTrackingEvent[]> {
+  if (!order.trackingNumber || !isCarrierShippingMethod(order.shippingMethod)) return [];
+  return shippingCarrier.track(order.trackingNumber);
+}
+
+export async function getMyOrderTracking(userId: string, orderId: string): Promise<ShippingTrackingEvent[]> {
+  return trackOrder(await getMyOrderById(userId, orderId));
+}
+
+export async function getAdminOrderTracking(orderId: string): Promise<ShippingTrackingEvent[]> {
+  return trackOrder(await getAdminOrderById(orderId));
 }
 
 /**

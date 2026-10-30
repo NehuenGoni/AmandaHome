@@ -70,3 +70,15 @@ export const importOrderToCarrier = asyncHandler(async (req: Request, res: Respo
   const order = await orderService.importOrderToCarrier(id);
   res.json({ order });
 });
+
+export const getMyOrderTracking = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as unknown as MongoIdParam;
+  const events = await orderService.getMyOrderTracking(req.user!.id, id);
+  res.json({ events });
+});
+
+export const adminGetOrderTracking = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as unknown as MongoIdParam;
+  const events = await orderService.getAdminOrderTracking(id);
+  res.json({ events });
+});

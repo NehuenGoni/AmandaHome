@@ -64,7 +64,7 @@ export default function AdminStoreSaleDetail() {
           <h1 className="font-display text-2xl text-text">Venta #{sale.saleNumber}</h1>
           <p className="text-sm text-text-muted">
             {formatDateTime(sale.createdAt)} · {PAYMENT_METHOD_LABELS[sale.paymentMethod]}
-            {sale.customer.name && ` · ${sale.customer.name}`}
+            {sale.customer?.name && ` · ${sale.customer.name}`}
           </p>
         </div>
         <Badge tone={STORE_SALE_STATUS_TONES[sale.status]}>{STORE_SALE_STATUS_LABELS[sale.status]}</Badge>

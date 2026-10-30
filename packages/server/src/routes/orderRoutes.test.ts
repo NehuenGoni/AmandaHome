@@ -119,3 +119,25 @@ describe("/api/orders", () => {
     expect(res.body.order.receiptUrl).toBe("https://res.cloudinary.com/test/receipt.jpg");
   });
 });
+
+describe("GET /api/orders/:id/tracking", () => {
+  it("devuelve los eventos de seguimiento del propio pedido (correo simulado)", async () => {
+    const { token, order } = await createCustomerWithOrder();
+    await Order.updateOne({ _id: order._id }, { shippingMethod: "home", trackingNumber: "TN123" });
+
+    const res = await request(app)
+      .get(`/api/orders/${order._id.toString()}/tracking`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.events.length).toBeGreaterThan(0);
+  });
+
+  it("devuelve una lista vacía para un retiro en el local", async () => {
+    const { token, order } = await createCustomerWithOrder();
+    const res = await request(app)
+      .get(`/api/orders/${order._id.toString()}/tracking`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.events).toEqual([]);
+  });
+});

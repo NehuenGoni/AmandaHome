@@ -84,7 +84,8 @@ export interface StoreSale {
   change?: number;
   /** Nº de cupón del posnet o de la transferencia. */
   paymentReference?: string;
-  customer: { name?: string; email?: string };
+  /** Mongoose omite el subdocumento al serializar si no se cargó nombre ni email. */
+  customer?: { name?: string; email?: string };
   notes?: string;
   status: StoreSaleStatus;
   voidedAt?: string;

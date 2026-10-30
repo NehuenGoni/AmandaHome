@@ -4,11 +4,21 @@ import { User } from "../models/User.js";
 import * as shippingService from "../services/shippingService.js";
 import { getShippingSettings, toPublicShippingSettings, updateShippingSettings } from "../services/shippingSettingsService.js";
 import { BadRequestError, NotFoundError } from "../utils/AppError.js";
-import type { QuoteShippingInput, UpdateShippingSettingsInput } from "../validators/shippingValidators.js";
+import type {
+  ListAgenciesInput,
+  QuoteShippingInput,
+  UpdateShippingSettingsInput,
+} from "../validators/shippingValidators.js";
 
 export const getPublicSettings = asyncHandler(async (_req: Request, res: Response) => {
   const settings = await getShippingSettings();
   res.json({ settings: toPublicShippingSettings(settings) });
+});
+
+export const listAgencies = asyncHandler(async (req: Request, res: Response) => {
+  const { provinceCode } = req.query as unknown as ListAgenciesInput;
+  const agencies = await shippingService.listAgencies(provinceCode);
+  res.json({ agencies });
 });
 
 export const quoteShipping = asyncHandler(async (req: Request, res: Response) => {
@@ -26,7 +36,12 @@ export const quoteShipping = asyncHandler(async (req: Request, res: Response) =>
     destinationPostalCode = address.postalCode;
   }
 
-  const options = await shippingService.quoteShipping({ items, subtotal, destinationPostalCode });
+  const agency =
+    input.agencyCode && input.provinceCode
+      ? await shippingService.findAgency(input.provinceCode, input.agencyCode)
+      : undefined;
+
+  const { options } = await shippingService.quoteShipping({ items, subtotal, destinationPostalCode, agency });
   res.json({ options });
 });
 

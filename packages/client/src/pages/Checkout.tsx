@@ -1,9 +1,10 @@
-import type { PublicShippingSettings, ShippingOption } from "@amanda/shared";
-import { formatMoney } from "@amanda/shared";
+import type { PublicShippingSettings, ShippingAgency, ShippingOption } from "@amanda/shared";
+import { findProvince, formatMoney, parseShippingOptionId, shippingServiceLabel } from "@amanda/shared";
 import { Loader2, Plus } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { AddressForm } from "@/components/account/AddressForm";
+import { AgencyPicker } from "@/components/orders/AgencyPicker";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { InlineMessage } from "@/components/ui/InlineMessage";
@@ -17,18 +18,34 @@ import { getShippingSettings, quoteShipping } from "@/lib/shippingApi";
 import { addAddress, type AddressInput } from "@/lib/usersApi";
 import { cn } from "@/lib/utils";
 
+/** Id "provisorio" para el retiro en sucursal mientras el cliente todavía no eligió una (sin sucursal no hay precio). */
+const BRANCH_PENDING_ID = "branch:CP";
+
+function etaLabel(option: ShippingOption): string | undefined {
+  if (!option.etaMinDays || !option.etaMaxDays) return undefined;
+  const days =
+    option.etaMinDays === option.etaMaxDays
+      ? `${option.etaMinDays}`
+      : `${option.etaMinDays} a ${option.etaMaxDays}`;
+  return `${option.method === "branch" ? "Disponible" : "Llega"} en ${days} días hábiles`;
+}
+
 export default function Checkout() {
   const { user, setUser } = useAuth();
   const { cart } = useCart();
   const [addressId, setAddressId] = useState(user?.addresses.find((a) => a.isDefault)?._id ?? "");
   const [showAddressForm, setShowAddressForm] = useState(user?.addresses.length === 0);
-  const [shippingMethod, setShippingMethod] = useState<"pickup" | "home">("home");
+  const [selectedId, setSelectedId] = useState("home:CP");
+  const [provinceCode, setProvinceCode] = useState("");
+  const [agency, setAgency] = useState<ShippingAgency | null>(null);
   const [options, setOptions] = useState<ShippingOption[]>([]);
   const [isQuoting, setIsQuoting] = useState(true);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<PublicShippingSettings | null>(null);
+
+  const selectedMethod = parseShippingOptionId(selectedId)?.method ?? "home";
 
   useEffect(() => {
     getShippingSettings()
@@ -38,30 +55,47 @@ export default function Checkout() {
       });
   }, []);
 
-  const fetchQuote = useCallback(
-    async (forHomeAddressId: string | undefined) => {
-      setIsQuoting(true);
-      setQuoteError(null);
-      try {
-        const { options: fetched } = await quoteShipping(forHomeAddressId);
-        setOptions(fetched);
-        // Si el método elegido quedó deshabilitado (o no había ninguno todavía), elegimos el primero disponible.
-        setShippingMethod((current) =>
-          fetched.some((o) => o.method === current) ? current : (fetched[0]?.method ?? current),
-        );
-      } catch (err) {
-        setQuoteError(err instanceof ApiError ? err.message : "No pudimos calcular el envío");
-      } finally {
-        setIsQuoting(false);
+  // La provincia de la sucursal arranca en la de la dirección elegida, si hay una.
+  useEffect(() => {
+    if (provinceCode) return;
+    const address = user?.addresses.find((a) => a._id === addressId);
+    const code = address && findProvince(address.province)?.code;
+    if (code) setProvinceCode(code);
+  }, [addressId, provinceCode, user]);
+
+  const fetchQuote = useCallback(async (forAddressId: string | undefined, forAgency: ShippingAgency | null) => {
+    setIsQuoting(true);
+    setQuoteError(null);
+    try {
+      const { options: fetched } = await quoteShipping({
+        addressId: forAddressId,
+        agencyCode: forAgency?.code,
+        provinceCode: forAgency?.provinceCode,
+      });
+      setOptions(fetched);
+      if (forAgency && !fetched.some((o) => o.method === "branch")) {
+        setQuoteError("No pudimos cotizar el envío a esa sucursal. Probá con otra o elegí otro método.");
       }
-    },
-    [],
-  );
+      // Si la opción elegida ya no está (o no había ninguna todavía), se elige la primera disponible.
+      // El retiro en sucursal se respeta aunque todavía no tenga precio, para no esconder el selector.
+      setSelectedId((current) => {
+        if (fetched.some((o) => o.id === current)) return current;
+        if (parseShippingOptionId(current)?.method === "branch") {
+          return fetched.find((o) => o.method === "branch")?.id ?? current;
+        }
+        return fetched[0]?.id ?? current;
+      });
+    } catch (err) {
+      setQuoteError(err instanceof ApiError ? err.message : "No pudimos calcular el envío");
+    } finally {
+      setIsQuoting(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (cart.items.length === 0) return;
-    fetchQuote(addressId || undefined);
-  }, [addressId, cart.items.length, fetchQuote]);
+    fetchQuote(addressId || undefined, agency);
+  }, [addressId, agency, cart.items.length, fetchQuote]);
 
   // Una sola vez por visita al checkout, no cada vez que cambia el envío o la dirección.
   const checkoutTracked = useRef(false);
@@ -82,11 +116,12 @@ export default function Checkout() {
 
   if (cart.items.length === 0) return <Navigate to="/carrito" replace />;
 
-  const selectedOption = options.find((o) => o.method === shippingMethod);
+  const selectedOption = options.find((o) => o.id === selectedId);
   const shippingCost = selectedOption?.cost ?? 0;
   const total = cart.subtotal + shippingCost;
-  const pickupOption = options.find((o) => o.method === "pickup");
-  const homeOption = options.find((o) => o.method === "home");
+  const hasBranchOptions = options.some((o) => o.method === "branch");
+  // Antes de elegir una sucursal no hay cotización de sucursal: se muestra una fila para poder elegirla.
+  const showBranchPlaceholder = Boolean(settings?.branchEnabled) && !hasBranchOptions;
 
   async function handleAddAddress(input: AddressInput) {
     const result = await addAddress(input);
@@ -96,9 +131,18 @@ export default function Checkout() {
     setShowAddressForm(false);
   }
 
+  function handleProvinceChange(code: string) {
+    setProvinceCode(code);
+    setAgency(null);
+  }
+
   async function handleConfirm() {
-    if (shippingMethod === "home" && !addressId) {
+    if (selectedMethod === "home" && !addressId) {
       setError("Elegí una dirección de envío");
+      return;
+    }
+    if (selectedMethod === "branch" && !agency) {
+      setError("Elegí la sucursal de Correo donde vas a retirar");
       return;
     }
     if (!selectedOption) {
@@ -109,8 +153,10 @@ export default function Checkout() {
     setError(null);
     try {
       const { checkoutUrl } = await createCheckout({
-        addressId: shippingMethod === "home" ? addressId : undefined,
-        shippingMethod,
+        addressId: selectedMethod === "home" ? addressId : undefined,
+        shippingOptionId: selectedOption.id,
+        agencyCode: selectedMethod === "branch" ? agency?.code : undefined,
+        provinceCode: selectedMethod === "branch" ? agency?.provinceCode : undefined,
         expectedShippingCost: selectedOption.cost,
         notes: undefined,
       });
@@ -118,7 +164,7 @@ export default function Checkout() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setError("El costo de envío cambió, revisá el nuevo precio y confirmá de nuevo");
-        fetchQuote(addressId || undefined);
+        fetchQuote(addressId || undefined, agency);
       } else {
         setError(err instanceof ApiError ? err.message : "No pudimos iniciar el pago");
       }
@@ -141,62 +187,58 @@ export default function Checkout() {
     return formatMoney(option.cost);
   }
 
+  function renderOptionRow(id: string, title: string, detail: string | undefined, cost: ReactNode) {
+    return (
+      <label
+        key={id}
+        className={cn(
+          "flex cursor-pointer items-center justify-between gap-3 rounded-2xl border p-4 transition-colors",
+          selectedId === id ? "border-accent bg-accent/5" : "border-border bg-surface",
+        )}
+      >
+        <span className="flex items-center gap-3 text-sm">
+          <input type="radio" name="shipping" checked={selectedId === id} onChange={() => setSelectedId(id)} />
+          <span>
+            {title}
+            {detail && <span className="block text-xs text-text-muted">{detail}</span>}
+          </span>
+        </span>
+        <span className="shrink-0 text-sm font-medium text-text">{cost}</span>
+      </label>
+    );
+  }
+
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
       <div className="flex flex-col gap-8">
         <section className="flex flex-col gap-4">
           <h2 className="font-display text-xl text-text">Método de envío</h2>
           <div className="flex flex-col gap-2">
-            {pickupOption && (
-              <label
-                className={cn(
-                  "flex cursor-pointer items-center justify-between gap-3 rounded-2xl border p-4 transition-colors",
-                  shippingMethod === "pickup" ? "border-accent bg-accent/5" : "border-border bg-surface",
-                )}
-              >
-                <span className="flex items-center gap-3 text-sm">
-                  <input
-                    type="radio"
-                    name="shipping"
-                    checked={shippingMethod === "pickup"}
-                    onChange={() => setShippingMethod("pickup")}
-                  />
-                  Retiro en el local
-                </span>
-                <span className="text-sm font-medium text-text">Gratis</span>
-              </label>
-            )}
-            {homeOption && (
-              <label
-                className={cn(
-                  "flex cursor-pointer items-center justify-between gap-3 rounded-2xl border p-4 transition-colors",
-                  shippingMethod === "home" ? "border-accent bg-accent/5" : "border-border bg-surface",
-                )}
-              >
-                <span className="flex items-center gap-3 text-sm">
-                  <input
-                    type="radio"
-                    name="shipping"
-                    checked={shippingMethod === "home"}
-                    onChange={() => setShippingMethod("home")}
-                  />
-                  <span>
-                    Envío a domicilio
-                    {homeOption.etaMinDays && homeOption.etaMaxDays && (
-                      <span className="block text-xs text-text-muted">
-                        Llega en {homeOption.etaMinDays}–{homeOption.etaMaxDays} días hábiles
-                      </span>
-                    )}
-                  </span>
-                </span>
-                <span className="text-sm font-medium text-text">{renderCost(homeOption)}</span>
-              </label>
-            )}
+            {options.map((option) => {
+              const service = option.method === "pickup" ? undefined : shippingServiceLabel(option.service);
+              const detail =
+                option.method === "branch" && option.agency
+                  ? [option.agency.name, etaLabel(option)].filter(Boolean).join(" · ")
+                  : etaLabel(option);
+              return renderOptionRow(
+                option.id,
+                service ? `${option.label} · ${service}` : option.label,
+                detail,
+                renderCost(option),
+              );
+            })}
+            {showBranchPlaceholder &&
+              renderOptionRow(
+                BRANCH_PENDING_ID,
+                "Retiro en sucursal de Correo",
+                "Elegí la sucursal para ver el precio",
+                isQuoting && agency ? "…" : "",
+              )}
             {quoteError && <InlineMessage tone="error">{quoteError}</InlineMessage>}
           </div>
         </section>
 
-        {shippingMethod === "pickup" ? (
+        {selectedMethod === "pickup" ? (
           <section className="flex flex-col gap-2">
             <h2 className="font-display text-xl text-text">Retirás en</h2>
             <Card>
@@ -209,6 +251,20 @@ export default function Checkout() {
                 Te vamos a avisar por mail cuando el pedido esté listo para retirar.
               </p>
             </Card>
+          </section>
+        ) : selectedMethod === "branch" ? (
+          <section className="flex flex-col gap-4">
+            <h2 className="font-display text-xl text-text">Sucursal de retiro</h2>
+            <AgencyPicker
+              provinceCode={provinceCode}
+              onProvinceChange={handleProvinceChange}
+              selectedCode={agency?.code}
+              onSelect={setAgency}
+            />
+            <p className="text-xs text-text-muted">
+              Vas a necesitar tu DNI para retirar. Correo Argentino te avisa por mail cuando el paquete llegue a la
+              sucursal.
+            </p>
           </section>
         ) : (
           <section className="flex flex-col gap-4">

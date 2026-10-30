@@ -54,15 +54,28 @@ export interface OrderItem {
 
 export type ShippingAddressSnapshot = Omit<Address, "_id" | "isDefault">;
 
+export interface OrderShippingAgency {
+  code: string;
+  name: string;
+  address: string;
+  postalCode: string;
+  provinceCode: string;
+}
+
 /** Detalle de la cotización de envío por correo (Correo Argentino), guardado al confirmar la orden. */
 export interface OrderShippingDetails {
   carrier: string;
+  /** "CP" (Clásico) o "EP" (Expreso). Ausente en pedidos viejos: se tratan como Clásico. */
   service?: string;
+  /** Sucursal de Correo elegida, solo si `shippingMethod` es "branch". */
+  agency?: OrderShippingAgency;
   etaMinDays?: number;
   etaMaxDays?: number;
   quotedAt: string;
-  /** Cuándo se cargó el envío en MiCorreo para generar la etiqueta (lo hace un admin). */
+  /** Cuándo se cargó el envío en MiCorreo para generar la etiqueta (automático al aprobarse el pago). */
   carrierImportedAt?: string;
+  /** Último error al cargar el envío en MiCorreo; se limpia cuando la carga sale bien. */
+  carrierImportError?: string;
   /** Si el costo se calculó con el precio de respaldo porque el correo no pudo cotizar. */
   isFallback?: boolean;
   /** Paquete usado para cotizar (gramos/cm), reutilizado al despachar sin tener que recalcularlo. */
@@ -92,7 +105,7 @@ export interface Order extends WithTimestamps {
   paymentDetails?: Record<string, unknown>;
   paymentIssue?: OrderPaymentIssue;
   shippingMethod: string;
-  /** Ausente cuando `shippingMethod` es "pickup": el retiro en el local no exige dirección. */
+  /** Ausente cuando `shippingMethod` es "pickup" o "branch": no hace falta una dirección del cliente. */
   shippingAddress?: ShippingAddressSnapshot;
   shippingDetails?: OrderShippingDetails;
   trackingNumber?: string;

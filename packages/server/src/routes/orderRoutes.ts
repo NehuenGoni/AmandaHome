@@ -22,3 +22,8 @@ orderRouter.patch(
   validateRequest(attachReceiptSchema),
   orderController.attachReceipt,
 );
+orderRouter.get(
+  "/:id/tracking",
+  validateRequest(mongoIdParamSchema, "params"),
+  orderController.getMyOrderTracking,
+);

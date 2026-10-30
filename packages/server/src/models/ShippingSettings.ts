@@ -9,8 +9,14 @@ export interface IShippingPickupSettings {
 
 export interface IShippingHomeSettings {
   enabled: boolean;
+  /** Ofrecer también el Expreso además del Clásico (a domicilio y a sucursal). */
+  expressEnabled: boolean;
   /** Centavos: precio usado si el correo no está configurado o no responde. */
   fallbackCost: number;
+}
+
+export interface IShippingBranchSettings {
+  enabled: boolean;
 }
 
 export interface IShippingPackageDefaults {
@@ -25,6 +31,8 @@ export interface IShippingPackageDefaults {
 export interface IShippingSettings {
   pickup: IShippingPickupSettings;
   home: IShippingHomeSettings;
+  branch: IShippingBranchSettings;
+  /** Centavos. Aplica solo al servicio Clásico (domicilio y sucursal). */
   freeShippingThreshold?: number;
   originPostalCode: string;
   defaultPackage: IShippingPackageDefaults;
@@ -45,7 +53,15 @@ const pickupSchema = new Schema<IShippingPickupSettings>(
 const homeSchema = new Schema<IShippingHomeSettings>(
   {
     enabled: { type: Boolean, required: true, default: true },
+    expressEnabled: { type: Boolean, required: true, default: true },
     fallbackCost: { type: Number, required: true, min: 0, default: 0 },
+  },
+  { _id: false },
+);
+
+const branchSchema = new Schema<IShippingBranchSettings>(
+  {
+    enabled: { type: Boolean, required: true, default: true },
   },
   { _id: false },
 );
@@ -63,7 +79,12 @@ const packageDefaultsSchema = new Schema<IShippingPackageDefaults>(
 const shippingSettingsSchema = new Schema<IShippingSettings>(
   {
     pickup: { type: pickupSchema, required: true, default: () => ({ enabled: true }) },
-    home: { type: homeSchema, required: true, default: () => ({ enabled: true, fallbackCost: 0 }) },
+    home: {
+      type: homeSchema,
+      required: true,
+      default: () => ({ enabled: true, expressEnabled: true, fallbackCost: 0 }),
+    },
+    branch: { type: branchSchema, required: true, default: () => ({ enabled: true }) },
     freeShippingThreshold: { type: Number, min: 0 },
     originPostalCode: { type: String, required: true, trim: true, default: "1000" },
     defaultPackage: { type: packageDefaultsSchema, required: true, default: () => ({}) },

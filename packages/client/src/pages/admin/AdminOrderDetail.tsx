@@ -1,8 +1,10 @@
+import { isCarrierShippingMethod } from "@amanda/shared";
 import { AlertTriangle, Paperclip } from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { OrderStatusForm } from "@/components/admin/OrderStatusForm";
 import { OrderSummaryCard } from "@/components/orders/OrderSummaryCard";
+import { TrackingTimeline } from "@/components/orders/TrackingTimeline";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { InlineMessage } from "@/components/ui/InlineMessage";
@@ -10,6 +12,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { useAdminOrder } from "@/hooks/admin/useAdminOrder";
 import { ApiError } from "@/lib/apiClient";
 import {
+  getAdminOrderTracking,
   importOrderToCarrier,
   reactivateOrder,
   refundOrder,
@@ -79,8 +82,9 @@ export default function AdminOrderDetail() {
   if (error || !order) return <p className="text-sm text-text-muted">Pedido no encontrado.</p>;
 
   const needsReview = order.paymentIssue && !order.paymentIssue.resolvedAt;
+  const isCarrierShipment = isCarrierShippingMethod(order.shippingMethod);
   const canImportToCarrier =
-    order.shippingMethod === "home" && order.paymentStatus === "approved" && !order.shippingDetails?.carrierImportedAt;
+    isCarrierShipment && order.paymentStatus === "approved" && !order.shippingDetails?.carrierImportedAt;
 
   return (
     <div className="flex flex-col gap-6">
@@ -134,12 +138,23 @@ export default function AdminOrderDetail() {
                 </p>
               ) : (
                 <>
+                  {order.shippingDetails?.carrierImportError ? (
+                    <div className="mt-2">
+                      <InlineMessage tone="error">
+                        No se pudo cargar automáticamente: {order.shippingDetails.carrierImportError}
+                      </InlineMessage>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-text-muted">
+                      El envío se carga solo en Correo Argentino al aprobarse el pago. Si todavía no aparece,
+                      podés cargarlo a mano.
+                    </p>
+                  )}
                   <p className="mt-2 text-sm text-text-muted">
-                    Carga este envío en Correo Argentino para generar la etiqueta. El número de seguimiento
-                    se sigue cargando a mano al pasar el pedido a "Enviado".
+                    El número de seguimiento se sigue cargando a mano al pasar el pedido a "Enviado".
                   </p>
                   <Button className="mt-3" size="sm" isLoading={isImportingCarrier} onClick={handleCarrierImport}>
-                    Cargar en MiCorreo
+                    {order.shippingDetails?.carrierImportError ? "Reintentar carga en MiCorreo" : "Cargar en MiCorreo"}
                   </Button>
                   {carrierError && (
                     <div className="mt-3">
@@ -149,6 +164,13 @@ export default function AdminOrderDetail() {
                 </>
               )}
             </Card>
+          )}
+
+          {order.trackingNumber && isCarrierShipment && (
+            <TrackingTimeline
+              trackingNumber={order.trackingNumber}
+              fetchEvents={() => getAdminOrderTracking(order._id)}
+            />
           )}
 
           {order.receiptUrl && (

@@ -1,9 +1,12 @@
 import type { Order } from "@amanda/shared";
-import { formatMoney, shippingMethodLabel } from "@amanda/shared";
+import { formatMoney, shippingMethodLabel, shippingServiceLabel } from "@amanda/shared";
 import { Card } from "@/components/ui/Card";
 import { OrderStatusBadge } from "./OrderStatusBadge";
 
 export function OrderSummaryCard({ order }: { order: Order }) {
+  const service = order.shippingMethod === "pickup" ? undefined : shippingServiceLabel(order.shippingDetails?.service);
+  const agency = order.shippingDetails?.agency;
+
   return (
     <Card className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
@@ -51,18 +54,26 @@ export function OrderSummaryCard({ order }: { order: Order }) {
       </div>
 
       <div className="border-t border-border pt-4 text-sm">
-        <p className="font-medium text-text">{shippingMethodLabel(order.shippingMethod)}</p>
+        <p className="font-medium text-text">
+          {shippingMethodLabel(order.shippingMethod)}
+          {service && ` · ${service}`}
+        </p>
         {order.shippingAddress ? (
           <p className="text-text-muted">
             {order.shippingAddress.street} {order.shippingAddress.number}, {order.shippingAddress.city},{" "}
             {order.shippingAddress.province} ({order.shippingAddress.postalCode})
+          </p>
+        ) : agency ? (
+          <p className="text-text-muted">
+            {agency.name}: {agency.address} ({agency.postalCode})
           </p>
         ) : (
           <p className="text-text-muted">Retirás el pedido en el local.</p>
         )}
         {order.shippingDetails?.etaMinDays && order.shippingDetails.etaMaxDays && (
           <p className="mt-1 text-text-muted">
-            Llega en {order.shippingDetails.etaMinDays}–{order.shippingDetails.etaMaxDays} días hábiles
+            {agency ? "Disponible en la sucursal en" : "Llega en"} {order.shippingDetails.etaMinDays}–
+            {order.shippingDetails.etaMaxDays} días hábiles
           </p>
         )}
         {order.trackingNumber && (

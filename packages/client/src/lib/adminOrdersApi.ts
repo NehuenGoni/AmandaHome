@@ -1,4 +1,4 @@
-import type { Order, OrderStatus, PaginatedResult } from "@amanda/shared";
+import type { Order, OrderStatus, PaginatedResult, ShippingTrackingEvent } from "@amanda/shared";
 import { apiGet, apiPatch, apiPost } from "./apiClient.js";
 
 export interface AdminListOrdersParams {
@@ -38,3 +38,6 @@ export const refundOrder = (id: string) => apiPost<{ order: Order }>(`/admin/ord
 
 export const importOrderToCarrier = (id: string) =>
   apiPost<{ order: Order }>(`/admin/orders/${id}/carrier-import`);
+
+export const getAdminOrderTracking = (id: string) =>
+  apiGet<{ events: ShippingTrackingEvent[] }>(`/admin/orders/${id}/tracking`);

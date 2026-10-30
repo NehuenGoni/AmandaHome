@@ -1,4 +1,4 @@
-import { sumCents } from "@amanda/shared";
+import { parseShippingOptionId, sumCents } from "@amanda/shared";
 import { Types, type ClientSession } from "mongoose";
 import { runInTransaction } from "../config/db.js";
 import { isMercadoPagoConfigured } from "../config/env.js";
@@ -11,7 +11,7 @@ import { BadRequestError, ConflictError, NotFoundError, ServiceUnavailableError 
 import type { CreateCheckoutInput } from "../validators/checkoutValidators.js";
 import { recordMovements, type StockChange } from "./inventoryService.js";
 import { createPaymentPreference, getPaymentDeadline } from "./paymentService.js";
-import { getPackageForItems, quoteShipping, type ShippingItemInput } from "./shippingService.js";
+import { findAgency, quoteShipping, type ShippingItemInput } from "./shippingService.js";
 
 export interface StockDecrement {
   product: Types.ObjectId;
@@ -77,13 +77,16 @@ export async function createOrderFromCart(
   const user = await User.findById(userId);
   if (!user) throw new NotFoundError("Usuario no encontrado");
 
+  const shippingMethod = parseShippingOptionId(input.shippingOptionId)!.method;
   const address =
-    input.shippingMethod === "home"
+    shippingMethod === "home"
       ? user.addresses.find((a) => a._id.toString() === input.addressId)
       : undefined;
-  if (input.shippingMethod === "home" && !address) {
+  if (shippingMethod === "home" && !address) {
     throw new NotFoundError("Dirección no encontrada");
   }
+  const agency =
+    shippingMethod === "branch" ? await findAgency(input.provinceCode!, input.agencyCode!) : undefined;
 
   const cart = await Cart.findOne({ user: userId });
   if (!cart || cart.items.length === 0) {
@@ -131,12 +134,13 @@ export async function createOrderFromCart(
   // Se recotiza acá (nunca se confía en `expectedShippingCost` para el cobro):
   // si el método está deshabilitado o el precio cambió desde que el cliente
   // lo vio, se corta el checkout antes de tocar stock.
-  const shippingOptions = await quoteShipping({
+  const quote = await quoteShipping({
     items: shippingItems,
     subtotal,
     destinationPostalCode: address?.postalCode,
+    agency,
   });
-  const shippingOption = shippingOptions.find((o) => o.method === input.shippingMethod);
+  const shippingOption = quote.options.find((o) => o.id === input.shippingOptionId);
   if (!shippingOption) {
     throw new BadRequestError("El método de envío elegido no está disponible");
   }
@@ -150,8 +154,7 @@ export async function createOrderFromCart(
   const total = sumCents(subtotal, shippingCost);
   // Se guarda el mismo paquete usado para cotizar, para no tener que
   // recalcularlo (ni confiar en que las variantes no cambiaron) al despachar.
-  const shippingPackage =
-    input.shippingMethod === "home" ? await getPackageForItems(shippingItems) : undefined;
+  const shippingPackage = shippingMethod === "pickup" ? undefined : quote.packages[shippingMethod];
 
   const orderNumber = await getNextSequence("orderNumber");
 
@@ -172,7 +175,7 @@ export async function createOrderFromCart(
           statusHistory: [{ status: "pending", changedAt: new Date() }],
           paymentMethod: "mercado_pago",
           paymentStatus: "pending",
-          shippingMethod: input.shippingMethod,
+          shippingMethod,
           shippingAddress: address
             ? {
                 label: address.label,
@@ -186,10 +189,17 @@ export async function createOrderFromCart(
               }
             : undefined,
           shippingDetails:
-            input.shippingMethod === "home"
+            shippingMethod !== "pickup"
               ? {
                   carrier: shippingOption.carrier ?? "correo_argentino",
-                  service: undefined,
+                  service: shippingOption.service,
+                  agency: agency && {
+                    code: agency.code,
+                    name: agency.name,
+                    address: [agency.address, agency.locality].filter(Boolean).join(", "),
+                    postalCode: agency.postalCode,
+                    provinceCode: agency.provinceCode,
+                  },
                   etaMinDays: shippingOption.etaMinDays,
                   etaMaxDays: shippingOption.etaMaxDays,
                   quotedAt: new Date(),

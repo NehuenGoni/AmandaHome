@@ -117,14 +117,9 @@ export default function AdminShipping() {
         {settings.home.enabled && (
           <div className="grid gap-3 sm:grid-cols-2">
             <MoneyInput
-              label="Precio de respaldo"
+              label="Precio de respaldo (Clásico)"
               value={settings.home.fallbackCost}
               onChange={(cents) => patch({ home: { ...settings.home, fallbackCost: cents } })}
-            />
-            <Input
-              label="Código postal de origen"
-              value={settings.originPostalCode}
-              onChange={(e) => patch({ originPostalCode: e.target.value })}
             />
           </div>
         )}
@@ -132,7 +127,57 @@ export default function AdminShipping() {
 
       <Card className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <p className="font-display text-lg text-text">Envío gratis desde un monto</p>
+          <div>
+            <p className="font-display text-lg text-text">Retiro en sucursal de Correo</p>
+            <p className="text-sm text-text-muted">
+              El cliente elige una sucursal de Correo Argentino y retira ahí. Suele ser más barato que a
+              domicilio. Si el correo no responde, esta opción no se ofrece.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-text">
+            <input
+              type="checkbox"
+              checked={settings.branch.enabled}
+              onChange={(e) => patch({ branch: { ...settings.branch, enabled: e.target.checked } })}
+            />
+            Habilitado
+          </label>
+        </div>
+      </Card>
+
+      {(settings.home.enabled || settings.branch.enabled) && (
+        <Card className="flex flex-col gap-4">
+          <p className="font-display text-lg text-text">Correo Argentino</p>
+          <label className="flex items-start gap-2 text-sm text-text">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={settings.home.expressEnabled}
+              onChange={(e) => patch({ home: { ...settings.home, expressEnabled: e.target.checked } })}
+            />
+            <span>
+              Ofrecer también el servicio Expreso
+              <span className="block text-text-muted">
+                Llega más rápido y cuesta más. Se muestra junto al Clásico, a domicilio y a sucursal.
+              </span>
+            </span>
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input
+              label="Código postal de origen"
+              value={settings.originPostalCode}
+              onChange={(e) => patch({ originPostalCode: e.target.value })}
+            />
+          </div>
+        </Card>
+      )}
+
+      <Card className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-display text-lg text-text">Envío gratis desde un monto</p>
+            <p className="text-sm text-text-muted">Aplica al servicio Clásico. El Expreso se cobra siempre.</p>
+          </div>
           <label className="flex items-center gap-2 text-sm text-text">
             <input
               type="checkbox"

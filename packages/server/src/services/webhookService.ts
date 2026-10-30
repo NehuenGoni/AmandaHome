@@ -1,6 +1,7 @@
 import { Order } from "../models/Order.js";
 import { User } from "../models/User.js";
 import { sendOrderConfirmationEmail } from "./email/emailService.js";
+import { importOrderToCarrier } from "./orderService.js";
 import { fetchMerchantOrderPaymentIds, fetchPayment } from "./paymentService.js";
 
 /**
@@ -28,7 +29,9 @@ export async function handlePaymentWebhook(paymentId: string | undefined): Promi
       mpStatusDetail: payment.statusDetail,
     };
 
+    let shouldImportToCarrier = false;
     if (payment.status === "approved" && order.status === "pending") {
+      shouldImportToCarrier = true;
       order.status = "confirmed";
       order.statusHistory.push({
         status: "confirmed",
@@ -60,6 +63,14 @@ export async function handlePaymentWebhook(paymentId: string | undefined): Promi
     // corresponde.
 
     await order.save();
+
+    if (shouldImportToCarrier) {
+      // Sin bloquear la respuesta a Mercado Pago: si falla, el error queda en
+      // la orden y el admin lo reintenta desde el detalle del pedido.
+      importOrderToCarrier(order.id, { auto: true }).catch((err) => {
+        console.error(`[webhook] no se pudo cargar el pedido #${order.orderNumber} en el correo:`, err);
+      });
+    }
   } catch (err) {
     console.error("[webhook] error procesando notificación de pago:", err);
   }

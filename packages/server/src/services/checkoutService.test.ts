@@ -20,7 +20,7 @@ vi.mock("../config/env.js", async (importOriginal) => {
 });
 
 const { createOrderFromCart, decrementStock } = await import("./checkoutService.js");
-const { quoteShipping } = await import("./shippingService.js");
+const { findAgency, quoteShipping } = await import("./shippingService.js");
 const { Cart } = await import("../models/Cart.js");
 const { Category } = await import("../models/Category.js");
 const { Order } = await import("../models/Order.js");
@@ -45,12 +45,12 @@ async function getShippingCost(
   quantities: number[],
   postalCode = "C1000",
 ): Promise<number> {
-  const options = await quoteShipping({
+  const { options } = await quoteShipping({
     items: quantities.map((quantity) => ({ quantity })),
     subtotal: 0,
     destinationPostalCode: method === "home" ? postalCode : undefined,
   });
-  return options.find((o) => o.method === method)!.cost;
+  return options.find((o) => o.id === (method === "home" ? "home:CP" : "pickup"))!.cost;
 }
 
 async function createUserWithAddress() {
@@ -109,7 +109,7 @@ describe("createOrderFromCart", () => {
     const expectedShippingCost = await getShippingCost("home", [2]);
     const { order, checkoutUrl } = await createOrderFromCart(user._id.toString(), {
       addressId,
-      shippingMethod: "home",
+      shippingOptionId: "home:CP",
       expectedShippingCost,
     });
 
@@ -144,11 +144,75 @@ describe("createOrderFromCart", () => {
 
     const { order } = await createOrderFromCart(user._id.toString(), {
       addressId,
-      shippingMethod: "pickup",
+      shippingOptionId: "pickup",
       expectedShippingCost: 0,
     });
     expect(order.shippingCost).toBe(0);
     expect(order.total).toBe(order.subtotal);
+  });
+
+  it("guarda el servicio Expreso y el paquete cotizado en el envío a domicilio", async () => {
+    mockPreferenceCreate.mockResolvedValue({ id: "pref-1", init_point: "https://mp.test/checkout" });
+
+    const { user, addressId } = await createUserWithAddress();
+    const { product, sku } = await createProductWithStock(5);
+    await Cart.create({ user: user._id, items: [{ product: product._id, variantSku: sku, quantity: 1 }] });
+
+    const { options } = await quoteShipping({
+      items: [{ quantity: 1 }],
+      subtotal: 0,
+      destinationPostalCode: "C1000",
+    });
+    const express = options.find((o) => o.id === "home:EP")!;
+
+    const { order } = await createOrderFromCart(user._id.toString(), {
+      addressId,
+      shippingOptionId: "home:EP",
+      expectedShippingCost: express.cost,
+    });
+    expect(order.shippingMethod).toBe("home");
+    expect(order.shippingCost).toBe(express.cost);
+    expect(order.shippingDetails?.service).toBe("EP");
+    expect(order.shippingDetails?.packageWeight).toBe(500);
+  });
+
+  it("crea un pedido para retirar en una sucursal de Correo, sin dirección del cliente", async () => {
+    mockPreferenceCreate.mockResolvedValue({ id: "pref-1", init_point: "https://mp.test/checkout" });
+
+    const { user } = await createUserWithAddress();
+    const { product, sku } = await createProductWithStock(5);
+    await Cart.create({ user: user._id, items: [{ product: product._id, variantSku: sku, quantity: 1 }] });
+
+    const agency = await findAgency("B", "B0002");
+    const { options } = await quoteShipping({ items: [{ quantity: 1 }], subtotal: 0, agency });
+    const branch = options.find((o) => o.id === "branch:CP")!;
+
+    const { order } = await createOrderFromCart(user._id.toString(), {
+      shippingOptionId: "branch:CP",
+      provinceCode: "B",
+      agencyCode: "B0002",
+      expectedShippingCost: branch.cost,
+    });
+    expect(order.shippingMethod).toBe("branch");
+    expect(order.shippingAddress).toBeUndefined();
+    expect(order.shippingDetails?.service).toBe("CP");
+    expect(order.shippingDetails?.agency).toMatchObject({ code: "B0002", name: "Sucursal Norte", postalCode: "1400" });
+  });
+
+  it("rechaza una sucursal que no está en la lista del correo", async () => {
+    const { user } = await createUserWithAddress();
+    const { product, sku } = await createProductWithStock(5);
+    await Cart.create({ user: user._id, items: [{ product: product._id, variantSku: sku, quantity: 1 }] });
+
+    await expect(
+      createOrderFromCart(user._id.toString(), {
+        shippingOptionId: "branch:CP",
+        provinceCode: "B",
+        agencyCode: "B9999",
+        expectedShippingCost: 0,
+      }),
+    ).rejects.toThrow("Sucursal no encontrada");
+    expect(await Order.countDocuments()).toBe(0);
   });
 
   it("rechaza si el carrito está vacío", async () => {
@@ -158,7 +222,7 @@ describe("createOrderFromCart", () => {
     await expect(
       createOrderFromCart(user._id.toString(), {
         addressId,
-        shippingMethod: "home",
+        shippingOptionId: "home:CP",
         expectedShippingCost: 0,
       }),
     ).rejects.toThrow();
@@ -175,7 +239,7 @@ describe("createOrderFromCart", () => {
     await expect(
       createOrderFromCart(user._id.toString(), {
         addressId: "64b000000000000000000000",
-        shippingMethod: "home",
+        shippingOptionId: "home:CP",
         expectedShippingCost: 0,
       }),
     ).rejects.toThrow();
@@ -195,7 +259,7 @@ describe("createOrderFromCart", () => {
 
     const expectedShippingCost = await getShippingCost("home", [2, 5]);
     await expect(
-      createOrderFromCart(user._id.toString(), { addressId, shippingMethod: "home", expectedShippingCost }),
+      createOrderFromCart(user._id.toString(), { addressId, shippingOptionId: "home:CP", expectedShippingCost }),
     ).rejects.toThrow();
 
     // El primer ítem había descontado stock antes de fallar el segundo: debe revertirse.
@@ -216,7 +280,7 @@ describe("createOrderFromCart", () => {
 
     const expectedShippingCost = await getShippingCost("home", [2]);
     await expect(
-      createOrderFromCart(user._id.toString(), { addressId, shippingMethod: "home", expectedShippingCost }),
+      createOrderFromCart(user._id.toString(), { addressId, shippingOptionId: "home:CP", expectedShippingCost }),
     ).rejects.toThrow();
 
     const updatedProduct = await Product.findById(product._id);
@@ -244,7 +308,7 @@ describe("createOrderFromCart", () => {
 
       const expectedShippingCost = await getShippingCost("home", [1]);
       await expect(
-        createOrderFromCart(user._id.toString(), { addressId, shippingMethod: "home", expectedShippingCost }),
+        createOrderFromCart(user._id.toString(), { addressId, shippingOptionId: "home:CP", expectedShippingCost }),
       ).rejects.toThrow();
 
       expect(await Order.countDocuments()).toBe(0);

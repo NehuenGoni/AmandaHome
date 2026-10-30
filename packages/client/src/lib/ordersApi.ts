@@ -1,4 +1,4 @@
-import type { Order, PaginatedResult } from "@amanda/shared";
+import type { Order, PaginatedResult, ShippingTrackingEvent } from "@amanda/shared";
 import { apiGet, apiPatch, apiPost } from "./apiClient.js";
 
 export const listMyOrders = (page = 1, limit = 10) =>
@@ -15,3 +15,6 @@ export const signReceiptUpload = (orderId: string) =>
   apiPost<{ signature: string; timestamp: number; apiKey: string; cloudName: string; folder: string }>(
     `/uploads/receipts/${orderId}/sign`,
   );
+
+export const getMyOrderTracking = (id: string) =>
+  apiGet<{ events: ShippingTrackingEvent[] }>(`/orders/${id}/tracking`);

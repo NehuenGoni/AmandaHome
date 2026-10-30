@@ -1,8 +1,10 @@
+import { isCarrierShippingMethod } from "@amanda/shared";
 import { Paperclip, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { OrderSummaryCard } from "@/components/orders/OrderSummaryCard";
 import { PayNowButton } from "@/components/orders/PayNowButton";
+import { TrackingTimeline } from "@/components/orders/TrackingTimeline";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { InlineMessage } from "@/components/ui/InlineMessage";
@@ -10,7 +12,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { useMyOrder } from "@/hooks/useMyOrder";
 import { ApiError } from "@/lib/apiClient";
 import { uploadToCloudinary } from "@/lib/cloudinaryUpload";
-import { attachReceipt, signReceiptUpload } from "@/lib/ordersApi";
+import { attachReceipt, getMyOrderTracking, signReceiptUpload } from "@/lib/ordersApi";
 import NotFound from "../NotFound";
 
 export default function AccountOrderDetail() {
@@ -47,6 +49,12 @@ export default function AccountOrderDetail() {
       <h1 className="font-display text-2xl text-text">Pedido #{current.orderNumber}</h1>
       {current.status === "pending" && <PayNowButton orderId={current._id} />}
       <OrderSummaryCard order={current} />
+      {current.trackingNumber && isCarrierShippingMethod(current.shippingMethod) && (
+        <TrackingTimeline
+          trackingNumber={current.trackingNumber}
+          fetchEvents={() => getMyOrderTracking(current._id)}
+        />
+      )}
 
       <Card>
         <div className="flex items-center gap-2">

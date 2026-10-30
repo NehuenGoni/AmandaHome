@@ -59,7 +59,7 @@ export default function StoreSaleTicket() {
 
         <p>Ticket #{sale.saleNumber}</p>
         <p>{formatDateTime(sale.createdAt)}</p>
-        {sale.customer.name && <p>Cliente: {sale.customer.name}</p>}
+        {sale.customer?.name && <p>Cliente: {sale.customer.name}</p>}
 
         <hr className="my-2 border-dashed border-black" />
 

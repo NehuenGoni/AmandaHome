@@ -100,7 +100,7 @@ export default function AdminStoreSales() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-text">
                     Venta #{sale.saleNumber}
-                    {sale.customer.name && <span className="text-text-muted"> · {sale.customer.name}</span>}
+                    {sale.customer?.name && <span className="text-text-muted"> · {sale.customer.name}</span>}
                   </p>
                   <p className="text-xs text-text-muted">
                     {formatDateTime(sale.createdAt)} · {PAYMENT_METHOD_LABELS[sale.paymentMethod]} ·{" "}

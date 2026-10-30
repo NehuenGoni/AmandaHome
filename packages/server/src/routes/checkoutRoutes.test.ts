@@ -72,19 +72,19 @@ async function setupCustomerWithCart() {
 
 /** El checkout recotiza el envío, así que el request necesita el mismo costo que va a calcular. */
 async function getHomeShippingCost(): Promise<number> {
-  const options = await quoteShipping({
+  const { options } = await quoteShipping({
     items: [{ quantity: 1 }],
     subtotal: 0,
     destinationPostalCode: "C1000",
   });
-  return options.find((o) => o.method === "home")!.cost;
+  return options.find((o) => o.id === "home:CP")!.cost;
 }
 
 describe("POST /api/checkout", () => {
   it("rechaza sin autenticación", async () => {
     const res = await request(app).post("/api/checkout").send({
       addressId: "64b000000000000000000000",
-      shippingMethod: "home",
+      shippingOptionId: "home:CP",
       expectedShippingCost: 0,
     });
     expect(res.status).toBe(401);
@@ -98,7 +98,7 @@ describe("POST /api/checkout", () => {
     const res = await request(app)
       .post("/api/checkout")
       .set("Authorization", `Bearer ${token}`)
-      .send({ addressId, shippingMethod: "home", expectedShippingCost });
+      .send({ addressId, shippingOptionId: "home:CP", expectedShippingCost });
 
     expect(res.status).toBe(201);
     expect(res.body.checkoutUrl).toBe("https://mp.test/checkout");
@@ -115,7 +115,7 @@ describe("POST /api/checkout/webhook", () => {
     const checkoutRes = await request(app)
       .post("/api/checkout")
       .set("Authorization", `Bearer ${token}`)
-      .send({ addressId, shippingMethod: "home", expectedShippingCost });
+      .send({ addressId, shippingOptionId: "home:CP", expectedShippingCost });
     const orderId = checkoutRes.body.order._id;
 
     mockPaymentGet.mockResolvedValue({ id: "pay-1", status: "approved", external_reference: orderId });

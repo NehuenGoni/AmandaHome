@@ -13,7 +13,7 @@ interface SendReceiptFormProps {
 }
 
 export function SendReceiptForm({ sale, onSent }: SendReceiptFormProps) {
-  const [email, setEmail] = useState(sale.customer.email ?? "");
+  const [email, setEmail] = useState(sale.customer?.email ?? "");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justSent, setJustSent] = useState<string | null>(null);

@@ -36,3 +36,8 @@ adminOrderRouter.post(
   validateRequest(mongoIdParamSchema, "params"),
   orderController.importOrderToCarrier,
 );
+adminOrderRouter.get(
+  "/:id/tracking",
+  validateRequest(mongoIdParamSchema, "params"),
+  orderController.adminGetOrderTracking,
+);
