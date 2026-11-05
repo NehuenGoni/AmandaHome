@@ -69,6 +69,10 @@ async function requestToken(): Promise<string> {
   });
 
   if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(
+      `[correo-argentino] auth falló: HTTP ${res.status} (env=${env.MICORREO_ENV}, user=${env.MICORREO_USER ? "set" : "MISSING"}, password=${env.MICORREO_PASSWORD ? "set" : "MISSING"}) ${body.slice(0, 200)}`,
+    );
     throw new ServiceUnavailableError("No se pudo autenticar con Correo Argentino");
   }
 
