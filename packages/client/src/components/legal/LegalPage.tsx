@@ -17,17 +17,17 @@ export function LegalPage({
   return (
     <article className="mx-auto max-w-3xl py-6">
       <Seo title={title} description={description} path={pathname} />
-      <h1 className="font-display text-3xl text-text">{title}</h1>
-      <p className="mt-1 text-xs text-text-muted">Última actualización: {LEGAL_LAST_UPDATE}</p>
-      <div className="mt-8 flex flex-col gap-8">{children}</div>
+      <h1 className="font-display text-4xl text-text sm:text-5xl">{title}</h1>
+      <p className="mt-2 text-base text-text-muted">Última actualización: {LEGAL_LAST_UPDATE}</p>
+      <div className="mt-10 flex flex-col gap-10">{children}</div>
     </article>
   );
 }
 
 export function LegalSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2 text-sm leading-relaxed text-text-muted">
-      <h2 className="font-display text-lg text-text">{title}</h2>
+    <section className="flex flex-col gap-3 text-lg leading-relaxed text-text-muted">
+      <h2 className="font-display text-2xl text-text">{title}</h2>
       {children}
     </section>
   );

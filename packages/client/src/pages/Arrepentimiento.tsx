@@ -51,7 +51,7 @@ export default function Arrepentimiento() {
       {receipt ? (
         <div className="mt-6">
           <InlineMessage tone="success">
-            Recibimos tu solicitud. Nº de trámite: <strong>{receipt.requestNumber}</strong> —{" "}
+            Recibimos tu solicitud. Nº de trámite: <strong>{receipt.requestNumber}</strong>, del{" "}
             {new Date(receipt.createdAt).toLocaleString("es-AR")}. Te enviamos la constancia a {email} y nos vamos a
             contactar para coordinar la devolución.
           </InlineMessage>

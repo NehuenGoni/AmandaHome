@@ -146,7 +146,7 @@ export default function AdminCategories() {
                   type="button"
                   onClick={() => setEditing(category)}
                   aria-label={`Editar ${category.name}`}
-                  className="flex size-8 items-center justify-center rounded-full text-text hover:bg-surface-alt"
+                  className="flex size-11 items-center justify-center rounded-full text-text hover:bg-surface-alt"
                 >
                   <Pencil className="size-4" />
                 </button>
@@ -154,7 +154,7 @@ export default function AdminCategories() {
                   type="button"
                   onClick={() => setPendingDelete(category)}
                   aria-label={`Eliminar ${category.name}`}
-                  className="flex size-8 items-center justify-center rounded-full text-accent2-deep hover:bg-surface-alt"
+                  className="flex size-11 items-center justify-center rounded-full text-accent2-deep hover:bg-surface-alt"
                 >
                   <Trash2 className="size-4" />
                 </button>

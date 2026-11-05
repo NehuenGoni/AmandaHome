@@ -24,7 +24,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
               width={600}
               height={600}
               loading="lazy"
-              className="size-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
+              className="size-full object-cover object-center"
             />
           ) : (
             <div className="flex size-full items-center justify-center text-text-muted">
@@ -32,14 +32,14 @@ export function ProductCard({ product }: { product: PublicProduct }) {
             </div>
           )}
           {outOfStock && (
-            <span className="absolute left-3 top-3 rounded-full bg-text/85 px-2.5 py-1 text-xs font-medium text-bg">
+            <span className="absolute left-3 top-3 rounded-full bg-text px-3 py-1 text-sm font-medium text-bg">
               Sin stock
             </span>
           )}
         </div>
-        <div className="flex flex-1 flex-col gap-1 p-4">
-          <p className="font-display text-base text-text">{product.name}</p>
-          <p className="text-sm font-medium text-accent-deep">
+        <div className="flex flex-1 flex-col gap-1.5 p-5">
+          <p className="font-display text-xl leading-snug text-text">{product.name}</p>
+          <p className="text-lg font-semibold text-accent-deep">
             {hasPriceRange(product) && <span className="text-text-muted">Desde </span>}
             <PriceTag cents={getMinPrice(product)} />
           </p>

@@ -21,6 +21,8 @@
   --surface: #f5f0e4;
   --surface-alt: #e9dcbd;
   --border: #d9c7a0;
+  /* Borde de campos y controles: 3:1 contra la superficie (--border es decorativo). */
+  --field-border: #857553;
   --text: #211e1a;
   --text-muted: #6b6252;
   --primary: #211e1a;
@@ -48,6 +50,7 @@
     --surface: #242019;
     --surface-alt: #2e2a1e;
     --border: #423c2b;
+    --field-border: #968b70;
     --text: #f2ebda;
     --text-muted: #b7ad93;
     --primary: #e0b24f;
@@ -69,6 +72,7 @@
   --surface: #242019;
   --surface-alt: #2e2a1e;
   --border: #423c2b;
+  --field-border: #968b70;
   --text: #f2ebda;
   --text-muted: #b7ad93;
   --primary: #e0b24f;
@@ -89,6 +93,11 @@
   --color-surface: var(--surface);
   --color-surface-alt: var(--surface-alt);
   --color-border: var(--border);
+  --color-field: var(--field-border);
+  /* Texto y velo sobre fotografía: siempre crema y negro de marca, en ambos temas. */
+  --color-on-photo: var(--color-crema-lino);
+  --color-photo-ink: var(--color-negro-amanda);
+  --color-photo-gold: var(--color-dorado-amanda);
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
   --color-primary: var(--primary);

@@ -29,7 +29,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-bg/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link to="/" aria-label="Amanda Home & Deco">
           <Logo className="h-12 w-auto" />
         </Link>
@@ -42,7 +42,7 @@ export function Header() {
               end={link.end}
               className={({ isActive }) =>
                 cn(
-                  "text-sm font-medium transition-colors hover:text-accent-deep",
+                  "text-lg font-medium transition-colors hover:text-accent-deep",
                   isActive ? "text-accent-deep" : "text-text",
                 )
               }
@@ -58,9 +58,9 @@ export function Header() {
           <Link
             to="/carrito"
             aria-label="Ver carrito"
-            className="relative flex size-10 items-center justify-center rounded-full text-text transition-colors hover:bg-surface-alt"
+            className="relative flex size-12 items-center justify-center rounded-full text-text transition-colors hover:bg-surface-alt"
           >
-            <ShoppingBag className="size-5" />
+            <ShoppingBag className="size-6" />
             <AnimatePresence>
               {itemCount > 0 && (
                 <motion.span
@@ -69,7 +69,7 @@ export function Header() {
                   animate={{ scale: 1 }}
                   exit={{ scale: 0 }}
                   transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  className="absolute -right-0.5 -top-0.5 flex size-4.5 items-center justify-center rounded-full bg-accent2 text-[10px] font-semibold text-on-accent2"
+                  className="absolute -right-0.5 -top-0.5 flex size-5 items-center justify-center rounded-full bg-accent2 text-xs font-semibold text-on-accent2"
                 >
                   {itemCount}
                 </motion.span>
@@ -83,7 +83,7 @@ export function Header() {
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen((v) => !v)}
-                  className="flex size-10 items-center justify-center rounded-full text-text transition-colors hover:bg-surface-alt"
+                  className="flex size-12 items-center justify-center rounded-full text-text transition-colors hover:bg-surface-alt"
                   aria-label="Menú de cuenta"
                 >
                   <UserIcon className="size-5" />
@@ -143,7 +143,7 @@ export function Header() {
             ) : (
               <Link
                 to="/login"
-                className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-strong"
+                className="inline-flex min-h-12 items-center rounded-full bg-primary px-6 text-base font-medium text-on-primary transition-colors hover:bg-primary-strong"
               >
                 Ingresar
               </Link>
@@ -152,7 +152,7 @@ export function Header() {
 
           <button
             type="button"
-            className="flex size-10 items-center justify-center rounded-full text-text hover:bg-surface-alt md:hidden"
+            className="flex size-12 items-center justify-center rounded-full text-text hover:bg-surface-alt md:hidden"
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Abrir menú"
           >
@@ -176,7 +176,7 @@ export function Header() {
                   key={link.to}
                   to={link.to}
                   onClick={() => setMenuOpen(false)}
-                  className="rounded-xl px-3 py-2.5 text-sm font-medium text-text hover:bg-surface-alt"
+                  className="rounded-xl px-4 py-3 text-lg font-medium text-text hover:bg-surface-alt"
                 >
                   {link.label}
                 </Link>
@@ -186,14 +186,14 @@ export function Header() {
                   <Link
                     to="/cuenta"
                     onClick={() => setMenuOpen(false)}
-                    className="rounded-xl px-3 py-2.5 text-sm font-medium text-text hover:bg-surface-alt"
+                    className="rounded-xl px-4 py-3 text-lg font-medium text-text hover:bg-surface-alt"
                   >
                     Mi cuenta
                   </Link>
                   <Link
                     to="/cuenta/pedidos"
                     onClick={() => setMenuOpen(false)}
-                    className="rounded-xl px-3 py-2.5 text-sm font-medium text-text hover:bg-surface-alt"
+                    className="rounded-xl px-4 py-3 text-lg font-medium text-text hover:bg-surface-alt"
                   >
                     Mis pedidos
                   </Link>
@@ -209,7 +209,7 @@ export function Header() {
                 <Link
                   to="/login"
                   onClick={() => setMenuOpen(false)}
-                  className="rounded-xl px-3 py-2.5 text-sm font-medium text-text hover:bg-surface-alt"
+                  className="rounded-xl px-4 py-3 text-lg font-medium text-text hover:bg-surface-alt"
                 >
                   Ingresar
                 </Link>

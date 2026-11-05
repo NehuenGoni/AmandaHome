@@ -90,10 +90,10 @@ export default function Catalog() {
             : undefined
         }
       />
-      <div className="flex flex-col gap-4">
-        <h1 className="font-display text-3xl text-text">{title}</h1>
+      <div className="flex flex-col gap-5">
+        <h1 className="font-display text-4xl text-text sm:text-5xl">{title}</h1>
         {activeCategory?.description && (
-          <p className="max-w-2xl text-sm leading-relaxed text-text-muted">{activeCategory.description}</p>
+          <p className="max-w-2xl text-lg leading-relaxed text-text-muted">{activeCategory.description}</p>
         )}
         <SearchBar value={search} onChange={(q) => updateParams({ q: q || undefined })} />
         <CategoryFilter
@@ -118,7 +118,7 @@ export default function Catalog() {
               >
                 Anterior
               </Button>
-              <span className="text-sm text-text-muted">
+              <span className="text-base text-text-muted">
                 Página {data.page} de {data.totalPages}
               </span>
               <Button

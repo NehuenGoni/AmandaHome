@@ -25,14 +25,14 @@ export function ProductVariantPicker({ value, onChange, onClear }: ProductVarian
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-text">{value.product.name}</p>
           <p className="text-xs text-text-muted">
-            {value.variant.attributeName}: {value.variant.attributeValue} · SKU {value.variant.sku}
+            {value.variant.attributeName}: {value.variant.attributeValue}, SKU {value.variant.sku}
           </p>
         </div>
         <button
           type="button"
           onClick={onClear}
           aria-label="Cambiar selección"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface"
+          className="flex size-11 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface"
         >
           <X className="size-4" />
         </button>
@@ -63,7 +63,7 @@ export function ProductVariantPicker({ value, onChange, onClear }: ProductVarian
               >
                 <span className="font-medium text-text">{product.name}</span>
                 <span className="text-xs text-text-muted">
-                  {variant.attributeName}: {variant.attributeValue} · SKU {variant.sku} · stock {variant.stock}
+                  {variant.attributeName}: {variant.attributeValue}, SKU {variant.sku}, stock {variant.stock}
                 </span>
               </button>
             )),

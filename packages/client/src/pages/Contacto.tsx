@@ -5,7 +5,8 @@ import { LegalPage, LegalSection } from "@/components/legal/LegalPage";
 import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
 
 export default function Contacto() {
-  const link = "inline-flex items-center gap-2 text-accent-deep hover:underline";
+  const link =
+    "flex min-h-14 items-center gap-3 rounded-2xl border-2 border-field bg-surface px-5 py-3 text-lg font-medium text-text transition-colors hover:border-accent-deep hover:bg-surface-alt";
   return (
     <LegalPage
       title="Contacto"
@@ -13,10 +14,10 @@ export default function Contacto() {
     >
       <LegalSection title="Escribinos">
         <p>Respondemos consultas sobre productos, pedidos, cambios y devoluciones.</p>
-        <ul className="flex flex-col gap-2">
+        <ul className="grid gap-3 sm:grid-cols-2">
           <li>
             <a href={`mailto:${BUSINESS.email}`} onClick={() => trackContactClick("email", "contacto")} className={link}>
-              <Mail className="size-4" /> {BUSINESS.email}
+              <Mail className="size-6 shrink-0 text-accent-deep" /> {BUSINESS.email}
             </a>
           </li>
           <li>
@@ -27,7 +28,7 @@ export default function Contacto() {
               rel="noreferrer"
               className={link}
             >
-              <WhatsAppIcon className="size-4" /> {BUSINESS.phone}
+              <WhatsAppIcon className="size-6 shrink-0 text-accent-deep" /> {BUSINESS.phone}
             </a>
           </li>
           <li>
@@ -38,17 +39,17 @@ export default function Contacto() {
               rel="noreferrer"
               className={link}
             >
-              <Instagram className="size-4" /> @homedecoamanda
+              <Instagram className="size-6 shrink-0 text-accent-deep" /> @homedecoamanda
             </a>
           </li>
-          <li className="inline-flex items-center gap-2">
-            <MapPin className="size-4" /> {BUSINESS.address}, {BUSINESS.city}
+          <li className="flex min-h-14 items-center gap-3 rounded-2xl border-2 border-border bg-surface px-5 py-3 text-lg text-text">
+            <MapPin className="size-6 shrink-0 text-accent-deep" /> {BUSINESS.address}, {BUSINESS.city}
           </li>
         </ul>
       </LegalSection>
       <LegalSection title="Datos del proveedor">
         <p>
-          {BUSINESS.legalName} — CUIT {BUSINESS.cuit}. Domicilio: {BUSINESS.address}.
+          {BUSINESS.legalName}, CUIT {BUSINESS.cuit}. Domicilio: {BUSINESS.address}.
         </p>
       </LegalSection>
       <LegalSection title="Defensa del Consumidor">
@@ -58,7 +59,7 @@ export default function Contacto() {
             href={BUSINESS.consumerDefenseUrl}
             target="_blank"
             rel="noreferrer"
-            className="text-accent-deep hover:underline"
+            className="font-medium text-accent-deep underline underline-offset-4 hover:text-text"
           >
             Defensa del Consumidor
           </a>

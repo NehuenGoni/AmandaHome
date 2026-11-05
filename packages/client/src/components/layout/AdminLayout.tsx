@@ -18,33 +18,33 @@ export function AdminLayout() {
 
   return (
     <ProtectedRoute role="admin">
-      <div className="min-h-screen bg-bg">
+      <div className="admin-app min-h-screen bg-bg">
         <header className="sticky top-0 z-40 border-b border-border bg-surface">
-          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+          <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6">
             <Link to="/admin" aria-label="Amanda Home & Deco">
-              <Logo className="h-8 w-auto" />
+              <Logo className="h-11 w-auto" />
             </Link>
             <div className="flex items-center gap-3">
-              <span className="hidden text-sm text-text-muted sm:inline">{user?.email}</span>
+              <span className="hidden text-base text-text-muted lg:inline">{user?.email}</span>
               <ThemeToggle />
               <Link
                 to="/"
-                className="flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium text-text transition-colors hover:bg-surface-alt"
+                className="flex min-h-12 items-center gap-2 rounded-full border-2 border-field px-5 text-base font-medium text-text transition-colors hover:bg-surface-alt"
               >
-                <Store className="size-4" /> Ver tienda
+                <Store className="size-5" /> Ver tienda
               </Link>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium text-accent2-deep transition-colors hover:bg-surface-alt"
+                className="flex min-h-12 items-center gap-2 rounded-full px-5 text-base font-medium text-accent2-deep transition-colors hover:bg-surface-alt"
               >
-                <LogOut className="size-4" /> Salir
+                <LogOut className="size-5" /> Salir
               </button>
             </div>
           </div>
         </header>
 
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 sm:grid-cols-[220px_1fr]">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:gap-10 sm:grid-cols-[17rem_1fr]">
           <AdminNav />
           <div className="min-w-0">
             <PageTransition>

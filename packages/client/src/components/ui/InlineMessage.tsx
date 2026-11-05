@@ -25,7 +25,7 @@ export function InlineMessage({ tone, children }: { tone: Tone; children: ReactN
         animate={{ opacity: 1, y: 0, height: "auto" }}
         exit={{ opacity: 0, height: 0 }}
         transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-        className={cn("flex items-start gap-2 rounded-xl border px-3.5 py-2.5 text-sm", toneClasses[tone])}
+        className={cn("flex items-start gap-2 rounded-xl border px-4 py-3 text-base", toneClasses[tone])}
       >
         <Icon className="mt-0.5 size-4 shrink-0" />
         <span>{children}</span>

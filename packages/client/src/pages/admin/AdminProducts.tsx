@@ -133,7 +133,7 @@ export default function AdminProducts() {
                       type="button"
                       onClick={() => handleRestore(product._id)}
                       aria-label={`Restaurar ${product.name}`}
-                      className="flex size-8 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt"
+                      className="flex size-11 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt"
                     >
                       <ArchiveRestore className="size-4" />
                     </button>
@@ -142,7 +142,7 @@ export default function AdminProducts() {
                       type="button"
                       onClick={() => setPendingArchive(product._id)}
                       aria-label={`Archivar ${product.name}`}
-                      className="flex size-8 items-center justify-center rounded-full text-accent2-deep hover:bg-surface-alt"
+                      className="flex size-11 items-center justify-center rounded-full text-accent2-deep hover:bg-surface-alt"
                     >
                       <Archive className="size-4" />
                     </button>

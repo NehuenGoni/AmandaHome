@@ -14,10 +14,10 @@ export function CategoryFilter({ categories, activeSlug, onSelect }: CategoryFil
         type="button"
         onClick={() => onSelect(null)}
         className={cn(
-          "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+          "min-h-11 rounded-full border-2 px-5 py-2 text-base font-medium transition-colors",
           !activeSlug
             ? "border-primary bg-primary text-on-primary"
-            : "border-border bg-surface text-text hover:bg-surface-alt",
+            : "border-field bg-surface text-text hover:bg-surface-alt",
         )}
       >
         Todas
@@ -28,10 +28,10 @@ export function CategoryFilter({ categories, activeSlug, onSelect }: CategoryFil
           type="button"
           onClick={() => onSelect(category)}
           className={cn(
-            "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+            "min-h-11 rounded-full border-2 px-5 py-2 text-base font-medium transition-colors",
             activeSlug === category.slug
               ? "border-primary bg-primary text-on-primary"
-              : "border-border bg-surface text-text hover:bg-surface-alt",
+              : "border-field bg-surface text-text hover:bg-surface-alt",
           )}
         >
           {category.name}

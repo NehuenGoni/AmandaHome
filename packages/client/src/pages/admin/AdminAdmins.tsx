@@ -75,7 +75,7 @@ export default function AdminAdmins() {
                         setPendingRevoke({ type: "admin", id: admin._id, label: `${admin.firstName} ${admin.lastName}` })
                       }
                       aria-label={`Revocar a ${admin.firstName}`}
-                      className="flex size-8 items-center justify-center rounded-full text-accent2-deep hover:bg-surface-alt"
+                      className="flex size-11 items-center justify-center rounded-full text-accent2-deep hover:bg-surface-alt"
                     >
                       <UserX className="size-4" />
                     </button>
@@ -92,7 +92,7 @@ export default function AdminAdmins() {
                 {invites.map((invite) => (
                   <div key={invite._id} className="flex items-center justify-between gap-3 px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <Mail className="size-4 text-text-muted" />
+                      <Mail className="size-5 text-text-muted" />
                       <div>
                         <p className="text-sm font-medium text-text">{invite.email}</p>
                         <p className="text-xs text-text-muted">
@@ -106,7 +106,7 @@ export default function AdminAdmins() {
                         type="button"
                         onClick={() => setPendingRevoke({ type: "invite", id: invite._id, label: invite.email })}
                         aria-label={`Revocar invitación a ${invite.email}`}
-                        className="flex size-8 items-center justify-center rounded-full text-accent2-deep hover:bg-surface-alt"
+                        className="flex size-11 items-center justify-center rounded-full text-accent2-deep hover:bg-surface-alt"
                       >
                         <UserX className="size-4" />
                       </button>

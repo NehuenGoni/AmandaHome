@@ -21,7 +21,7 @@ export function EmptyState({ icon: Icon, title, description, action }: EmptyStat
       </motion.div>
       <div className="flex flex-col gap-1">
         <p className="font-display text-lg text-text">{title}</p>
-        {description && <p className="max-w-sm text-sm text-text-muted">{description}</p>}
+        {description && <p className="max-w-sm text-base text-text-muted">{description}</p>}
       </div>
       {action}
     </div>

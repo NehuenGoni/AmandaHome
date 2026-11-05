@@ -10,21 +10,20 @@ export function AuthCard({ title, subtitle, children }: { title: string; subtitl
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         className="grid overflow-hidden rounded-3xl border border-border bg-surface md:grid-cols-2"
       >
-        <div className="relative hidden md:block">
+        <div className="relative hidden md:block after:absolute after:inset-0 after:bg-gradient-to-t after:from-photo-ink/70 after:to-transparent">
           <img
             src="/local-mostrador.jpeg"
             alt="Local de Amanda Home & Deco"
             className="absolute inset-0 size-full object-cover object-[20%_center]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#211e1a]/60 to-transparent" />
-          <p className="absolute bottom-6 left-6 right-6 font-display text-xl italic text-[#f5f0e4]">
+          <p className="absolute bottom-8 left-8 right-8 z-10 font-display text-3xl text-on-photo">
             Te esperamos también en el local.
           </p>
         </div>
-        <div className="p-8 sm:p-10">
+        <div className="p-8 sm:p-12">
           <div className="mb-6 flex flex-col gap-1">
-            <h1 className="font-display text-2xl text-text">{title}</h1>
-            {subtitle && <p className="text-sm text-text-muted">{subtitle}</p>}
+            <h1 className="font-display text-3xl text-text">{title}</h1>
+            {subtitle && <p className="text-lg text-text-muted">{subtitle}</p>}
           </div>
           {children}
         </div>

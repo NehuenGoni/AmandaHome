@@ -1,3 +1,7 @@
+/* Hallmark · shape: kept · genre: editorial · theme: brand · redesign: full
+ * paper: oklch(0.91 0.03 85) · accent: oklch(0.73 0.12 85) · display: Fraunces · body: Work Sans · hero: Settled (/) · nav: kept · footer: kept · signature: the shop's own shelves as the first screen; the admin set at 18px with 48px controls
+ * axes: light/roman-serif/warm · posture: photo-led · contrast: pass · fold: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: E, the admin has no screenshots to judge so its sizes were checked in code and by reading the tokens */
 @import "tailwindcss";
 @import "./styles/tokens.css";
 
@@ -6,19 +10,78 @@
   --font-body: "Work Sans", system-ui, -apple-system, sans-serif;
 }
 
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   background-color: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  caret-color: var(--accent);
+  -webkit-font-smoothing: antialiased;
   transition: background-color 200ms ease, color 200ms ease;
 }
 
-h1, h2, h3, h4, .font-display {
+h1,
+h2,
+h3,
+h4,
+.font-display {
   font-family: var(--font-display);
+}
+
+h1,
+h2,
+h3 {
+  min-width: 0;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 * {
   scrollbar-color: var(--border) transparent;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent-deep);
+  outline-offset: 2px;
+}
+
+/*
+ * Escala de lectura del panel de administración: quienes lo usan son personas mayores,
+ * así que todo el texto sube un escalón (18 px de base, nunca menos de 16 px).
+ * Tailwind 4 resuelve text-sm, text-lg… contra estas variables, por lo que basta
+ * con redefinirlas dentro de .admin-app y todas las pantallas del panel las heredan.
+ */
+.admin-app {
+  --text-xs: 1rem;
+  --text-xs--line-height: 1.45;
+  --text-sm: 1.125rem;
+  --text-sm--line-height: 1.5;
+  --text-base: 1.1875rem;
+  --text-base--line-height: 1.5;
+  --text-lg: 1.375rem;
+  --text-lg--line-height: 1.4;
+  --text-xl: 1.625rem;
+  --text-xl--line-height: 1.3;
+  --text-2xl: 2rem;
+  --text-2xl--line-height: 1.2;
+  --text-3xl: 2.5rem;
+  --text-3xl--line-height: 1.15;
+  font-size: 1.1875rem;
 }
 
 /*
@@ -68,4 +131,15 @@ h1, h2, h3, h4, .font-display {
 
 :root.dark .brand-logo {
   filter: brightness(0) invert(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

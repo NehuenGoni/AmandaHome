@@ -7,7 +7,7 @@ import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
 import { Logo } from "./Logo";
 
 const linkClass = "text-text-muted transition-colors hover:text-accent-deep";
-const titleClass = "text-[13px] font-medium text-text";
+const titleClass = "text-base font-semibold text-text";
 
 export function Footer() {
   const [open, setOpen] = useState(false);
@@ -25,7 +25,7 @@ export function Footer() {
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left md:hidden"
       >
         <Logo className="h-7 w-auto shrink-0" />
-        <span className="flex-1 text-[11px] text-text-muted">© {year} {BUSINESS.name}</span>
+        <span className="flex-1 text-sm text-text-muted">© {year} {BUSINESS.name}</span>
         <ChevronUp
           aria-hidden="true"
           className={`size-4 shrink-0 text-text-muted transition-transform duration-300 motion-reduce:transition-none ${
@@ -46,7 +46,7 @@ export function Footer() {
               {/* En mobile la marca ya está en la barra: acá se oculta para no repetirla. */}
               <Logo className="hidden h-10 w-auto shrink-0 md:block" />
               <div className="flex flex-col gap-1.5">
-                <p className="max-w-[16rem] text-xs leading-relaxed text-text-muted">
+                <p className="max-w-xs text-base leading-relaxed text-text-muted">
                   Textiles, cerámica y objetos que hacen de tu casa un lugar propio.
                 </p>
                 <div className="flex items-center gap-3 text-text-muted">
@@ -58,7 +58,7 @@ export function Footer() {
                     aria-label="Instagram de Amanda Home & Deco"
                     className="inline-flex transition-colors hover:text-accent-deep"
                   >
-                    <Instagram className="size-4" />
+                    <Instagram className="size-6" />
                   </a>
                   <a
                     href={BUSINESS.whatsappUrl}
@@ -66,16 +66,16 @@ export function Footer() {
                     target="_blank"
                     rel="noreferrer"
                     aria-label="WhatsApp de Amanda Home & Deco"
-                    className="inline-flex items-center gap-1.5 text-xs transition-colors hover:text-accent-deep"
+                    className="inline-flex items-center gap-1.5 text-base transition-colors hover:text-accent-deep"
                   >
-                    <WhatsAppIcon className="size-4" />
+                    <WhatsAppIcon className="size-6" />
                     {BUSINESS.phone}
                   </a>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-x-10 gap-y-5 text-sm">
+            <div className="flex flex-wrap gap-x-12 gap-y-6 text-base">
               <div className="flex flex-col gap-1.5">
                 <span className={titleClass}>Tienda</span>
                 <Link to="/catalogo" className={linkClass}>
@@ -118,7 +118,7 @@ export function Footer() {
           </div>
 
           <div className="border-t border-border px-4 py-3 sm:px-6">
-            <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-1 text-[13px] text-text-muted sm:flex-row">
+            <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-1 text-sm text-text-muted sm:flex-row">
               <span>
                 © {year} {BUSINESS.name}. Todos los derechos reservados.
               </span>

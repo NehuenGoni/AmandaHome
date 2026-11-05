@@ -94,7 +94,7 @@ export function SupplierPurchaseForm({ onCreated }: { onCreated: () => void }) {
                   type="button"
                   onClick={() => removeRow(index)}
                   aria-label="Quitar ítem"
-                  className="flex size-8 items-center justify-center rounded-full text-accent2-deep hover:bg-surface-alt"
+                  className="flex size-11 items-center justify-center rounded-full text-accent2-deep hover:bg-surface-alt"
                 >
                   <Trash2 className="size-4" />
                 </button>

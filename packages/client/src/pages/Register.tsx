@@ -65,7 +65,7 @@ export default function Register() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-text-muted">
+      <p className="mt-6 text-center text-base text-text-muted">
         ¿Ya tenés cuenta?{" "}
         <Link to="/login" className="font-medium text-accent-deep hover:underline">
           Ingresá

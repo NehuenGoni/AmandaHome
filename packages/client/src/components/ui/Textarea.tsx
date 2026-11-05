@@ -16,7 +16,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={textareaId} className="text-sm font-medium text-text">
+        <label htmlFor={textareaId} className="text-base font-medium text-text">
           {label}
         </label>
       )}
@@ -26,7 +26,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         rows={rows}
         aria-invalid={Boolean(error)}
         className={cn(
-          "resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text placeholder:text-text-muted",
+          "resize-none rounded-xl border-2 border-field bg-surface px-4 py-3 text-base text-text placeholder:text-text-muted",
           "transition-colors duration-150 outline-none",
           "focus:border-accent focus:ring-2 focus:ring-accent/30",
           error && "border-accent2 focus:border-accent2 focus:ring-accent2/30",
@@ -34,7 +34,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         )}
         {...props}
       />
-      {error && <p className="text-xs text-accent2-deep">{error}</p>}
+      {error && <p className="text-sm text-accent2-deep">{error}</p>}
     </div>
   );
 });

@@ -44,7 +44,7 @@ export function MoneyInput({ label, value, onChange, error, disabled }: MoneyInp
           value={text}
           onChange={(e) => handleChange(e.target.value)}
           className={cn(
-            "h-11 w-full rounded-xl border border-border bg-surface pl-7 pr-4 text-sm text-text",
+            "h-12 w-full rounded-xl border-2 border-field bg-surface pl-7 pr-4 text-base text-text",
             "transition-colors duration-150 outline-none",
             "focus:border-accent focus:ring-2 focus:ring-accent/30",
             error && "border-accent2 focus:border-accent2 focus:ring-accent2/30",

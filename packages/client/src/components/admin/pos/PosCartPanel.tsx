@@ -113,7 +113,7 @@ export function PosCartPanel({ cart, totals, dispatch, onSold }: PosCartPanelPro
                   type="button"
                   aria-label={`Quitar ${line.productName}`}
                   onClick={() => dispatch({ type: "remove", variantSku: line.variantSku })}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt"
                 >
                   <Trash2 className="size-4" />
                 </button>

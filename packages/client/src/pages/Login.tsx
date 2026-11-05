@@ -56,7 +56,7 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
         />
         <div className="-mt-1 text-right">
-          <Link to="/forgot-password" className="text-xs font-medium text-accent-deep hover:underline">
+          <Link to="/forgot-password" className="text-base font-medium text-accent-deep underline underline-offset-4 hover:text-text">
             ¿Olvidaste tu contraseña?
           </Link>
         </div>
@@ -68,7 +68,7 @@ export default function Login() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-text-muted">
+      <p className="mt-6 text-center text-base text-text-muted">
         ¿No tenés cuenta?{" "}
         <Link to="/registro" className="font-medium text-accent-deep hover:underline">
           Creá una

@@ -11,11 +11,11 @@ interface QuantityStepperProps {
 }
 
 export function QuantityStepper({ value, min = 1, max, onChange, disabled, size = "md" }: QuantityStepperProps) {
-  const buttonSize = size === "sm" ? "size-7" : "size-9";
-  const textSize = size === "sm" ? "text-sm" : "text-base";
+  const buttonSize = size === "sm" ? "size-10" : "size-12";
+  const textSize = size === "sm" ? "text-base" : "text-lg";
 
   return (
-    <div className="inline-flex items-center rounded-full border border-border bg-surface">
+    <div className="inline-flex items-center rounded-full border-2 border-field bg-surface">
       <button
         type="button"
         disabled={disabled || value <= min}
@@ -26,9 +26,9 @@ export function QuantityStepper({ value, min = 1, max, onChange, disabled, size 
         )}
         aria-label="Restar unidad"
       >
-        <Minus className="size-3.5" />
+        <Minus className="size-4" />
       </button>
-      <span className={cn("min-w-8 text-center font-medium tabular-nums", textSize)}>{value}</span>
+      <span className={cn("min-w-10 text-center font-medium tabular-nums", textSize)}>{value}</span>
       <button
         type="button"
         disabled={disabled || (max !== undefined && value >= max)}
@@ -39,7 +39,7 @@ export function QuantityStepper({ value, min = 1, max, onChange, disabled, size 
         )}
         aria-label="Sumar unidad"
       >
-        <Plus className="size-3.5" />
+        <Plus className="size-4" />
       </button>
     </div>
   );

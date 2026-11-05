@@ -72,7 +72,7 @@ export function OrderSummaryCard({ order }: { order: Order }) {
         )}
         {order.shippingDetails?.etaMinDays && order.shippingDetails.etaMaxDays && (
           <p className="mt-1 text-text-muted">
-            {agency ? "Disponible en la sucursal en" : "Llega en"} {order.shippingDetails.etaMinDays}–
+            {agency ? "Disponible en la sucursal en" : "Llega en"} {order.shippingDetails.etaMinDays} a{" "}
             {order.shippingDetails.etaMaxDays} días hábiles
           </p>
         )}

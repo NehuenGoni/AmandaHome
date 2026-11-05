@@ -19,19 +19,19 @@ export default function AdminDashboard() {
   const isLoading = loadingPending || loadingRecent || loadingLowStock || loadingStoreSales;
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="font-display text-2xl text-text">Dashboard</h1>
+    <div className="flex flex-col gap-8">
+      <h1 className="font-display text-4xl text-text">Dashboard</h1>
 
       {isLoading ? (
         <Spinner />
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <StatCard
               icon={Store}
               label={
                 storeSummary && storeSummary.total > 0
-                  ? `Ventas en el local hoy · ${formatMoney(storeSummary.total)}`
+                  ? `Ventas en el local hoy, ${formatMoney(storeSummary.total)}`
                   : "Ventas en el local hoy"
               }
               value={storeSummary?.count ?? 0}
@@ -59,14 +59,14 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <h2 className="font-display text-lg text-text">Pedidos recientes</h2>
+            <h2 className="font-display text-2xl text-text">Pedidos recientes</h2>
             {recentOrders && recentOrders.items.length > 0 ? (
               <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
                 {recentOrders.items.map((order) => (
                   <Link
                     key={order._id}
                     to={`/admin/pedidos/${order._id}`}
-                    className="flex items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-surface-alt"
+                    className="flex items-center justify-between gap-3 px-6 py-5 transition-colors hover:bg-surface-alt"
                   >
                     <div>
                       <p className="text-sm font-medium text-text">Pedido #{order.orderNumber}</p>

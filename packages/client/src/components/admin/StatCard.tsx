@@ -23,18 +23,18 @@ export function StatCard({ icon: Icon, label, value, to, tone = "neutral" }: Sta
   const display = useTransform(spring, (v) => Math.round(v).toLocaleString("es-AR"));
 
   const content = (
-    <Card className={cn("flex items-center gap-4 transition-colors", to && "hover:bg-surface-alt")}>
+    <Card className={cn("flex items-center gap-5 p-6 transition-colors", to && "hover:bg-surface-alt")}>
       <div
         className={cn(
-          "flex size-11 shrink-0 items-center justify-center rounded-full",
+          "flex size-14 shrink-0 items-center justify-center rounded-full",
           tone === "warning" ? "bg-accent2/15 text-accent2-deep" : "bg-accent/15 text-accent-deep",
         )}
       >
-        <Icon className="size-5" />
+        <Icon className="size-7" />
       </div>
       <div className="flex flex-col">
-        <motion.span className="font-display text-2xl tabular-nums text-text">{display}</motion.span>
-        <span className="text-sm text-text-muted">{label}</span>
+        <motion.span className="font-display text-4xl tabular-nums text-text">{display}</motion.span>
+        <span className="text-base text-text-muted">{label}</span>
       </div>
     </Card>
   );

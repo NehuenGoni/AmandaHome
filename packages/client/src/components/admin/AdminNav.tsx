@@ -30,7 +30,7 @@ const LINKS = [
 
 export function AdminNav() {
   return (
-    <nav className="flex gap-1 overflow-x-auto sm:flex-col sm:gap-1 sm:overflow-visible">
+    <nav aria-label="Secciones del panel" className="flex gap-2 overflow-x-auto sm:flex-col sm:gap-1.5 sm:overflow-visible">
       {LINKS.map((link) => (
         <NavLink
           key={link.to}
@@ -38,12 +38,12 @@ export function AdminNav() {
           end={link.end}
           className={({ isActive }) =>
             cn(
-              "flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors",
+              "flex min-h-13 shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-lg font-medium transition-colors",
               isActive ? "bg-primary text-on-primary" : "text-text hover:bg-surface-alt",
             )
           }
         >
-          <link.icon className="size-4" />
+          <link.icon className="size-6 shrink-0" />
           {link.label}
         </NavLink>
       ))}
