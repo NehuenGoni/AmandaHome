@@ -1,94 +1,141 @@
 import { BUSINESS } from "@amanda/shared";
-import { Instagram } from "lucide-react";
+import { ChevronUp, Instagram } from "lucide-react";
+import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import { trackContactClick } from "@/lib/analytics";
 import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
 import { Logo } from "./Logo";
 
+const linkClass = "text-text-muted transition-colors hover:text-accent-deep";
+const titleClass = "text-[13px] font-medium text-text";
+
 export function Footer() {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const year = new Date().getFullYear();
+
   return (
     <footer className="border-t border-border bg-surface">
-      <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Logo className="h-10 w-auto shrink-0" />
-          <div className="flex flex-col gap-1.5">
-            <p className="max-w-[16rem] text-xs leading-relaxed text-text-muted">
-              Textiles, cerámica y objetos que hacen de tu casa un lugar propio.
-            </p>
-            <div className="flex items-center gap-3 text-text-muted">
-              <a
-                href={BUSINESS.instagramUrl}
-                onClick={() => trackContactClick("instagram", "footer")}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Instagram de Amanda Home & Deco"
-                className="inline-flex transition-colors hover:text-accent-deep"
-              >
-                <Instagram className="size-4" />
-              </a>
-              <a
-                href={BUSINESS.whatsappUrl}
-                onClick={() => trackContactClick("whatsapp", "footer")}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="WhatsApp de Amanda Home & Deco"
-                className="inline-flex items-center gap-1.5 text-xs transition-colors hover:text-accent-deep"
-              >
-                <WhatsAppIcon className="size-4" />
-                {BUSINESS.phone}
-              </a>
+      {/* Mobile: barra plegable. En desktop el botón no se muestra y el panel está siempre abierto. */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left md:hidden"
+      >
+        <Logo className="h-7 w-auto shrink-0" />
+        <span className="flex-1 text-[11px] text-text-muted">© {year} {BUSINESS.name}</span>
+        <ChevronUp
+          aria-hidden="true"
+          className={`size-4 shrink-0 text-text-muted transition-transform duration-300 motion-reduce:transition-none ${
+            open ? "rotate-0" : "rotate-180"
+          }`}
+        />
+      </button>
+
+      <div
+        id={panelId}
+        className={`grid transition-[grid-template-rows,visibility] duration-300 motion-reduce:transition-none md:visible md:grid-rows-[1fr] ${
+          open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr] delay-[0s,300ms]"
+        } md:delay-0`}
+      >
+        <div className="overflow-hidden">
+          <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 pb-4 pt-2 sm:px-6 md:flex-row md:items-start md:justify-between md:gap-10 md:py-10">
+            <div className="flex items-center gap-4">
+              {/* En mobile la marca ya está en la barra: acá se oculta para no repetirla. */}
+              <Logo className="hidden h-10 w-auto shrink-0 md:block" />
+              <div className="flex flex-col gap-1.5">
+                <p className="max-w-[16rem] text-xs leading-relaxed text-text-muted">
+                  Textiles, cerámica y objetos que hacen de tu casa un lugar propio.
+                </p>
+                <div className="flex items-center gap-3 text-text-muted">
+                  <a
+                    href={BUSINESS.instagramUrl}
+                    onClick={() => trackContactClick("instagram", "footer")}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Instagram de Amanda Home & Deco"
+                    className="inline-flex transition-colors hover:text-accent-deep"
+                  >
+                    <Instagram className="size-4" />
+                  </a>
+                  <a
+                    href={BUSINESS.whatsappUrl}
+                    onClick={() => trackContactClick("whatsapp", "footer")}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="WhatsApp de Amanda Home & Deco"
+                    className="inline-flex items-center gap-1.5 text-xs transition-colors hover:text-accent-deep"
+                  >
+                    <WhatsAppIcon className="size-4" />
+                    {BUSINESS.phone}
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-x-10 gap-y-5 text-sm">
+              <div className="flex flex-col gap-1.5">
+                <span className={titleClass}>Tienda</span>
+                <Link to="/catalogo" className={linkClass}>
+                  Catálogo
+                </Link>
+                <Link to="/carrito" className={linkClass}>
+                  Carrito
+                </Link>
+                <Link to="/cuenta/pedidos" className={linkClass}>
+                  Mis pedidos
+                </Link>
+                <Link to="/login" className={linkClass}>
+                  Ingresar
+                </Link>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className={titleClass}>Legales</span>
+                <div className="grid grid-cols-1 gap-x-8 gap-y-1.5 sm:grid-cols-2">
+                  <Link to="/terminos-y-condiciones" className={linkClass}>
+                    Términos y condiciones
+                  </Link>
+                  <Link to="/politica-de-privacidad" className={linkClass}>
+                    Privacidad
+                  </Link>
+                  <Link to="/cambios-y-devoluciones" className={linkClass}>
+                    Cambios y devoluciones
+                  </Link>
+                  <Link to="/contacto" className={linkClass}>
+                    Contacto
+                  </Link>
+                  <Link to="/arrepentimiento" className="font-medium text-accent-deep hover:underline">
+                    Botón de arrepentimiento
+                  </Link>
+                  <a href={BUSINESS.consumerDefenseUrl} target="_blank" rel="noopener noreferrer" className={linkClass}>
+                    Defensa del Consumidor
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-border px-4 py-3 sm:px-6">
+            <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-1 text-[13px] text-text-muted sm:flex-row">
+              <span>
+                © {year} {BUSINESS.name}. Todos los derechos reservados.
+              </span>
+              <span>
+                Diseñado y desarrollado por{" "}
+                <a
+                  href={BUSINESS.author.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-text transition-colors hover:text-accent-deep"
+                >
+                  {BUSINESS.author.name}
+                </a>
+              </span>
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-x-10 gap-y-6 text-xs">
-          <div className="flex flex-col gap-1.5">
-            <span className="font-medium text-text">Tienda</span>
-            <Link to="/catalogo" className="text-text-muted hover:text-accent-deep">
-              Catálogo
-            </Link>
-            <Link to="/carrito" className="text-text-muted hover:text-accent-deep">
-              Carrito
-            </Link>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="font-medium text-text">Cuenta</span>
-            <Link to="/cuenta/pedidos" className="text-text-muted hover:text-accent-deep">
-              Mis pedidos
-            </Link>
-            <Link to="/login" className="text-text-muted hover:text-accent-deep">
-              Ingresar
-            </Link>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="font-medium text-text">Legales</span>
-            <Link to="/terminos-y-condiciones" className="text-text-muted hover:text-accent-deep">
-              Términos y condiciones
-            </Link>
-            <Link to="/cambios-y-devoluciones" className="text-text-muted hover:text-accent-deep">
-              Cambios y devoluciones
-            </Link>
-            <Link to="/politica-de-privacidad" className="text-text-muted hover:text-accent-deep">
-              Privacidad
-            </Link>
-            <Link to="/contacto" className="text-text-muted hover:text-accent-deep">
-              Contacto
-            </Link>
-            <Link to="/arrepentimiento" className="font-medium text-accent-deep hover:underline">
-              Botón de arrepentimiento
-            </Link>
-            <a
-              href={BUSINESS.consumerDefenseUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-text-muted hover:text-accent-deep"
-            >
-              Defensa del Consumidor
-            </a>
-          </div>
-        </div>
-      </div>
-      <div className="border-t border-border px-4 py-3 text-center text-[11px] text-text-muted sm:px-6">
-        © {new Date().getFullYear()} Amanda Home & Deco — Buenos Aires, Argentina
       </div>
     </footer>
   );

@@ -29,4 +29,6 @@ export const BUSINESS = {
   consumerDefenseUrl: "https://www.argentina.gob.ar/produccion/defensadelconsumidor",
   /** Días corridos para ejercer el arrepentimiento (Ley 24.240, art. 34). */
   withdrawalDays: 10,
+  /** Autoría del sitio: el footer lee de acá, es el único lugar donde se cambia. */
+  author: { name: "Nesys", url: "https://www.nesys.com.ar" },
 } as const;
