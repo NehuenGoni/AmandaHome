@@ -3,6 +3,7 @@ import { env, isCorreoArgentinoConfigured } from "../../config/env.js";
 import { BadRequestError, ServiceUnavailableError } from "../../utils/AppError.js";
 import type {
   CarrierItemPackage,
+  CarrierPackage,
   CarrierQuote,
   CarrierQuoteInput,
   CarrierRate,
@@ -20,10 +21,9 @@ const REQUEST_TIMEOUT_MS = 8000;
 /** Esperas entre reintentos ante 429/5xx: la API pide retroceso exponencial. */
 const RETRY_DELAYS_MS = [400, 1200];
 
-/** Límites de la API por paquete (ver /rates/packages). */
-const MAX_WEIGHT_GRAMS = 50_000;
-const MAX_SIDE_CM = 200;
-const MAX_SIDES_SUM_CM = 300;
+/** Límites de la API por paquete (ver /rates). */
+const MAX_WEIGHT_GRAMS = 25_000;
+const MAX_SIDE_CM = 150;
 
 const MAX_QUOTE_CACHE_MS = 30 * 60_000;
 const AGENCIES_CACHE_MS = 12 * 60 * 60_000;
@@ -49,7 +49,9 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
     return await fetch(url, { ...init, signal: controller.signal });
-  } catch {
+  } catch (err) {
+    const cause = err instanceof Error ? (err.cause ?? err.message) : err;
+    console.error(`[correo-argentino] falló la llamada a ${new URL(url).pathname}:`, cause);
     throw new ServiceUnavailableError("No se pudo contactar a Correo Argentino");
   } finally {
     clearTimeout(timeout);
@@ -129,24 +131,35 @@ function toEtaDays(value: unknown): number | undefined {
   return Number.isFinite(days) && days > 0 ? days : undefined;
 }
 
-function assertPackagesWithinLimits(packages: CarrierItemPackage[]): void {
-  let totalWeight = 0;
+/**
+ * /rates cotiza un solo paquete, así que los productos del carrito se juntan
+ * en una caja: el peso se suma y los productos se apilan sobre su lado más
+ * chico, con la base del más grande. Es una estimación (no un bin-packing
+ * real) y se valida contra los límites de la API antes de cotizar.
+ */
+function stackPackages(packages: CarrierItemPackage[]): CarrierPackage {
+  const box = { weight: 0, height: 0, width: 0, length: 0 };
   for (const pkg of packages) {
-    const sides = [pkg.height, pkg.width, pkg.length];
-    if (pkg.weight < 1 || pkg.weight > MAX_WEIGHT_GRAMS) {
-      throw new BadRequestError("Un producto supera el peso máximo que acepta Correo Argentino (50 kg)");
-    }
-    if (sides.some((side) => side > MAX_SIDE_CM)) {
-      throw new BadRequestError("Un producto supera la medida máxima por lado que acepta Correo Argentino (200 cm)");
-    }
-    if (sides.reduce((sum, side) => sum + side, 0) > MAX_SIDES_SUM_CM) {
-      throw new BadRequestError("Un producto supera la suma de lados que acepta Correo Argentino (300 cm)");
-    }
-    totalWeight += pkg.weight * pkg.quantity;
+    const [thin, mid, long] = [pkg.height, pkg.width, pkg.length].sort((a, b) => a - b) as [number, number, number];
+    box.weight += pkg.weight * pkg.quantity;
+    box.height += thin * pkg.quantity;
+    box.width = Math.max(box.width, mid);
+    box.length = Math.max(box.length, long);
   }
-  if (totalWeight > MAX_WEIGHT_GRAMS) {
-    throw new BadRequestError("El pedido supera el peso máximo de un envío de Correo Argentino (50 kg)");
+
+  const rounded = {
+    weight: Math.round(box.weight),
+    height: Math.ceil(box.height),
+    width: Math.ceil(box.width),
+    length: Math.ceil(box.length),
+  };
+  if (rounded.weight < 1 || rounded.weight > MAX_WEIGHT_GRAMS) {
+    throw new BadRequestError("El pedido supera el peso máximo de un envío de Correo Argentino (25 kg)");
   }
+  if ([rounded.height, rounded.width, rounded.length].some((side) => side > MAX_SIDE_CM)) {
+    throw new BadRequestError("El pedido supera la medida máxima por lado de un envío de Correo Argentino (150 cm)");
+  }
+  return rounded;
 }
 
 function quoteCacheKey({ postalCodeDestination, packages }: CarrierQuoteInput): string {
@@ -157,9 +170,8 @@ function quoteCacheKey({ postalCodeDestination, packages }: CarrierQuoteInput): 
   return `${postalCodeDestination}|${items}`;
 }
 
-interface PackagesRatesResponse {
+interface RatesResponse {
   validTo?: string;
-  dimensions?: { weight?: number; height?: number; width?: number; length?: number };
   rates?: Array<{
     deliveredType: "D" | "S";
     productType: string;
@@ -169,7 +181,6 @@ interface PackagesRatesResponse {
     deliveryTimeMin?: string | number;
     deliveryTimeMax?: string | number;
   }>;
-  erroMessage?: string | null;
 }
 
 interface AgencyResponseItem {
@@ -246,38 +257,32 @@ export const correoArgentinoCarrier: ShippingCarrier = {
 
   async quote(input: CarrierQuoteInput): Promise<CarrierQuote> {
     assertConfigured();
-    assertPackagesWithinLimits(input.packages);
+    const box = stackPackages(input.packages);
 
     const cacheKey = quoteCacheKey(input);
     const cached = quoteCache.get(cacheKey);
     if (cached) return cached;
 
-    const res = await correoFetch("/rates/packages", {
+    // /rates cotiza UN paquete: sin `deliveredType` devuelve domicilio y
+    // sucursal en la misma llamada.
+    const res = await correoFetch("/rates", {
       method: "POST",
       body: JSON.stringify({
         customerId: env.MICORREO_CUSTOMER_ID,
         postalCodeOrigin: input.postalCodeOrigin,
         postalCodeDestination: input.postalCodeDestination,
-        // null = cotiza domicilio y sucursal en la misma llamada.
-        deliveredType: null,
-        dimensions: input.packages.map((p) => ({
-          quantity: p.quantity,
-          weight: Math.round(p.weight),
-          height: Math.round(p.height),
-          width: Math.round(p.width),
-          length: Math.round(p.length),
-        })),
+        dimensions: box,
       }),
     });
 
     if (!res.ok) {
-      throw new ServiceUnavailableError("No se pudo cotizar el envío con Correo Argentino");
+      const message = await readErrorMessage(res);
+      throw new ServiceUnavailableError(
+        message ? `Correo Argentino no pudo cotizar: ${message}` : "No se pudo cotizar el envío con Correo Argentino",
+      );
     }
 
-    const data = (await res.json()) as PackagesRatesResponse;
-    if (data.erroMessage) {
-      throw new ServiceUnavailableError(`Correo Argentino no pudo cotizar: ${data.erroMessage}`);
-    }
+    const data = (await res.json()) as RatesResponse;
 
     const rates: CarrierRate[] = (data.rates ?? [])
       .filter((r) => (r.deliveredType === "D" || r.deliveredType === "S") && (r.productType === "CP" || r.productType === "EP"))
@@ -292,19 +297,7 @@ export const correoArgentinoCarrier: ShippingCarrier = {
       throw new ServiceUnavailableError("Correo Argentino no devolvió tarifas para este destino");
     }
 
-    const largest = (side: "height" | "width" | "length") =>
-      Math.max(...input.packages.map((p) => p[side]));
-    const quote: CarrierQuote = {
-      carrier: "correo_argentino",
-      rates,
-      package: {
-        // El peso se suma acá: el que devuelve la API no siempre coincide con la suma de los productos.
-        weight: Math.round(input.packages.reduce((sum, p) => sum + p.weight * p.quantity, 0)),
-        height: Math.round(data.dimensions?.height ?? largest("height")),
-        width: Math.round(data.dimensions?.width ?? largest("width")),
-        length: Math.round(data.dimensions?.length ?? largest("length")),
-      },
-    };
+    const quote: CarrierQuote = { carrier: "correo_argentino", rates, package: box };
 
     const validTo = data.validTo ? new Date(data.validTo).getTime() - Date.now() : MAX_QUOTE_CACHE_MS;
     quoteCache.set(cacheKey, quote, Math.min(Number.isNaN(validTo) ? 0 : validTo, MAX_QUOTE_CACHE_MS));

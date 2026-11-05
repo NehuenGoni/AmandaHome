@@ -40,14 +40,12 @@ const ratesResponse = (overrides: Record<string, unknown> = {}) =>
   jsonResponse({
     customerId: "cust-1",
     validTo: new Date(Date.now() + 60 * 60_000).toISOString(),
-    dimensions: { weight: 600, height: 20, width: 30, length: 40 },
     rates: [
       { deliveredType: "S", productType: "CP", productName: "Clásico", price: 2000, deliveryTimeMin: "2", deliveryTimeMax: "5" },
       { deliveredType: "S", productType: "EP", productName: "Expreso", price: 5000, deliveryTimeMin: "1", deliveryTimeMax: "3" },
       { deliveredType: "D", productType: "CP", productName: "Clásico", price: 2500, deliveryTimeMin: "3", deliveryTimeMax: "6" },
       { deliveredType: "D", productType: "EP", productName: "Expreso", price: 6000, deliveryTimeMin: "1", deliveryTimeMax: "2" },
     ],
-    erroMessage: null,
     ...overrides,
   });
 
@@ -116,7 +114,7 @@ describe("correoArgentinoCarrier", () => {
   });
 
   describe("quote", () => {
-    it("cotiza todos los productos juntos con /rates/packages y devuelve las 4 tarifas", async () => {
+    it("junta los productos en una caja, cotiza con /rates y devuelve las tarifas", async () => {
       const carrier = await importFreshCarrier();
       const fetchMock = vi.fn().mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(ratesResponse());
       vi.stubGlobal("fetch", fetchMock);
@@ -124,20 +122,18 @@ describe("correoArgentinoCarrier", () => {
       const quote = await carrier.quote(quoteInput());
 
       expect(fetchMock.mock.calls[0]?.[0]).toContain("/token");
-      expect(fetchMock.mock.calls[1]?.[0]).toContain("/rates/packages");
+      expect(fetchMock.mock.calls[1]?.[0]).toContain("/rates");
       const body = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string);
-      expect(body).toMatchObject({ customerId: "cust-1", postalCodeOrigin: "1000", postalCodeDestination: "5000", deliveredType: null });
-      expect(body.dimensions).toEqual([
-        { quantity: 2, weight: 500, height: 15, width: 15, length: 15 },
-        { quantity: 1, weight: 300, height: 10, width: 10, length: 10 },
-      ]);
+      expect(body).toMatchObject({ customerId: "cust-1", postalCodeOrigin: "1000", postalCodeDestination: "5000" });
+      expect(body).not.toHaveProperty("deliveredType");
+      // 2 × (15×15×15) + 1 × (10×10×10): se apilan sobre el lado más chico.
+      expect(body.dimensions).toEqual({ weight: 1300, height: 40, width: 15, length: 15 });
 
       expect(quote.carrier).toBe("correo_argentino");
       expect(quote.rates).toHaveLength(4);
       expect(quote.rates).toContainEqual({ deliveryType: "home", service: "CP", price: 250000, etaMinDays: 3, etaMaxDays: 6 });
       expect(quote.rates).toContainEqual({ deliveryType: "branch", service: "EP", price: 500000, etaMinDays: 1, etaMaxDays: 3 });
-      // Medidas de la caja apilada que devuelve el correo; el peso es la suma de los productos (2×500 + 300).
-      expect(quote.package).toEqual({ weight: 1300, height: 20, width: 30, length: 40 });
+      expect(quote.package).toEqual({ weight: 1300, height: 40, width: 15, length: 15 });
     });
 
     it("reutiliza el token mientras no venza", async () => {
@@ -151,7 +147,7 @@ describe("correoArgentinoCarrier", () => {
       await carrier.quote(quoteInput({ postalCodeDestination: "5000" }));
       await carrier.quote(quoteInput({ postalCodeDestination: "6000" }));
 
-      // 1 llamado a /token + 2 a /rates/packages.
+      // 1 llamado a /token + 2 a /rates.
       expect(fetchMock).toHaveBeenCalledTimes(3);
     });
 
@@ -209,9 +205,9 @@ describe("correoArgentinoCarrier", () => {
       expect(quote.rates).toHaveLength(4);
       expect(fetchMock.mock.calls.map(([url]) => (url as string).split("/v1")[1])).toEqual([
         "/token",
-        "/rates/packages",
+        "/rates",
         "/token",
-        "/rates/packages",
+        "/rates",
       ]);
     });
 
@@ -257,39 +253,30 @@ describe("correoArgentinoCarrier", () => {
         .mockResolvedValueOnce(jsonResponse({ code: 422, message: "Datos Invalidos" }, 422));
       vi.stubGlobal("fetch", fetchMock);
 
-      await expect(carrier.quote(quoteInput())).rejects.toThrow("No se pudo cotizar");
+      await expect(carrier.quote(quoteInput())).rejects.toThrow("Datos Invalidos");
     });
 
-    it("lanza un error si la respuesta trae erroMessage", async () => {
+    it("incluye el motivo del error de MiCorreo al fallar la cotización", async () => {
       const carrier = await importFreshCarrier();
       const fetchMock = vi
         .fn()
         .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(ratesResponse({ rates: [], erroMessage: "Destino sin cobertura" }));
+        .mockResolvedValueOnce(jsonResponse({ code: "402", message: "Cliente FAP no identificado" }, 402));
       vi.stubGlobal("fetch", fetchMock);
 
-      await expect(carrier.quote(quoteInput())).rejects.toThrow("Destino sin cobertura");
+      await expect(carrier.quote(quoteInput())).rejects.toThrow("Cliente FAP no identificado");
     });
 
     it.each([
-      ["un producto de más de 50 kg", { weight: 50_001 }],
-      ["un lado de más de 200 cm", { height: 201 }],
-      ["una suma de lados de más de 300 cm", { height: 190, width: 100 }],
-    ])("rechaza sin llamar al correo %s", async (_label, overrides) => {
+      ["un peso de más de 25 kg", { weight: 12_500 }, "25 kg"],
+      ["un lado de más de 150 cm", { width: 151 }, "150 cm"],
+    ])("rechaza sin llamar al correo %s", async (_label, overrides, message) => {
       const carrier = await importFreshCarrier();
       const fetchMock = vi.fn();
       vi.stubGlobal("fetch", fetchMock);
 
-      await expect(carrier.quote(quoteInput(overrides))).rejects.toThrow();
+      await expect(carrier.quote(quoteInput(overrides))).rejects.toThrow(message);
       expect(fetchMock).not.toHaveBeenCalled();
-    });
-
-    it("rechaza un pedido que en total pasa los 50 kg", async () => {
-      const carrier = await importFreshCarrier();
-      vi.stubGlobal("fetch", vi.fn());
-
-      // 2 × 25 kg + 300 g.
-      await expect(carrier.quote(quoteInput({ weight: 25_000 }))).rejects.toThrow("50 kg");
     });
 
     it("rechaza cotizar si no está configurado", async () => {

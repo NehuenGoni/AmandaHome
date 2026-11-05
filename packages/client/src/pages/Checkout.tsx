@@ -262,8 +262,9 @@ export default function Checkout() {
               onSelect={setAgency}
             />
             <p className="text-xs text-text-muted">
-              Vas a necesitar tu DNI para retirar. Correo Argentino te avisa por mail cuando el paquete llegue a la
-              sucursal.
+              El paquete sale a nombre de {`${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || "tu cuenta"}:
+              esa persona tiene que retirarlo con su DNI. Correo Argentino te avisa por mail cuando el paquete llegue
+              a la sucursal.
             </p>
           </section>
         ) : (
